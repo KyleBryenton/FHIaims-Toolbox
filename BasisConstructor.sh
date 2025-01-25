@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # BasisConstructor.sh
-# Kyle Bryenton - 2024-09-15
+# Kyle Bryenton - 2025-01-25
 # 
 #       Setup: Set the "basis_dir" in the header.
 # Description: This script finds FHI-aims geometry.in files and sets the basis in their corresponding control.in files based on the input arguments
@@ -48,10 +48,10 @@
 # ~~~~~~~~~~ HEADER and INPUT ~~~~~~~~~~~
 
 # Set the Delete_old_control_flag. If false, preserves the old control.in as control.old
-Delete_old_control_flag=false
+Delete_old_control_flag=true
 
 # Set Basis Directory Locations
-basis_dir="${HOME}/projects/def-ejohnson/FHIaims/FHIaims_240507_Stable/species_defaults/"
+basis_dir="${HOME}/projects/def-ejohnson/bryenton/FHIaims/FHIaims_241126/species_defaults/"
 
 # Current locations:
 Li_dir="${basis_dir}defaults_2020/light"
@@ -61,6 +61,7 @@ Re_dir="${basis_dir}defaults_2020/really_tight"
 LD_dir="${basis_dir}defaults_2020/lightdense"
 LDr_dir="${basis_dir}defaults_next/dense/lightdenser"
 Aug2_dir="${basis_dir}non-standard/Tier2_aug2"
+Cu_dir="${basis_dir}non-standard/tight_and_aug2"
 
 # Future Locations:
 #Li_dir="${basis_dir}defaults_next/standard/light"
@@ -70,7 +71,6 @@ Aug2_dir="${basis_dir}non-standard/Tier2_aug2"
 #LD_dir="${basis_dir}defaults_next/dense/lightdense"
 #ID_dir="${basis_dir}defaults_next/dense/intdense"
 #TD_dir="${basis_dir}defaults_next/dense/tightdense"
-
 
 # _____Unless you're adding support for a new basis, nothing needs to be modified below this line______
 
@@ -216,13 +216,15 @@ LDr_flag=false  #Flag to scan for "lightdenser/"  directories
 ID_flag=false   #Flag to scan for "intdense/"     directories
 RD_flag=false   #Flag to scan for "tightdense/"   directories
 Aug2_flag=false #Flag to scan for "Tier2_aug2/"   directories
+Cu_flag=false   #Flag to scan for a user-inputted custom directory
+
 if [ $# == 0 ]; then
     echo "EXITING... NO BASIS SELECTED." >&2
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" >&2
     echo "WARNING: Use with care. See code header for instructions           " >&2
     echo "                                                                   " >&2
-    echo "  USAGE: 1) $0 <basis> <basis> <basis> ...                         " >&2
-    echo "         2) $0 -setall <basis>                                     " >&2
+    echo "  USAGE: 1\) $0 \<basis\> \<basis\> \<basis\> ...                  " >&2
+    echo "         2\) $0 -setall \<basis\>                                  " >&2
     echo "                                                                   " >&2
     echo " Supported Basis Sets:   Basis          Alias                      " >&2
     echo "                       - light          li                         " >&2
@@ -327,6 +329,14 @@ else
                     echo "ERROR: 'Tier2_aug2/' basis directory not detected --- Skipping..."
                 fi
                 ;;
+	    "cu"|"custom")
+                if [[ -d "$Cu_dir" && "$Cu_dir" != "$basis_dir" ]] ;
+                    then Cu_flag=true
+                    echo "Detected Basis: Custom (Designated by user in code header)"
+                else
+                    echo "ERROR: 'Custom' basis directory not detected --- Skipping..."
+                fi
+                ;;
 	    "all")
 		if [[ -d "$Li_dir" && "$Li_dir" != "$basis_dir" ]] ; then
                     Li_flag=true
@@ -382,7 +392,14 @@ else
                 else
                     echo "WARNING: 'Tier2_aug2/' basis directory not detected --- Skipping..."
                 fi
-		;;
+		if [[ -d "$Cu_dir" && "$Cu_dir" != "$basis_dir" ]] ;
+                    then Cu_flag=true
+                    echo "Detected Basis: Custom (Designated by user in code header)"
+                else
+                    echo "ERROR: 'Custom' basis directory not detected --- Skipping..."
+                fi
+                ;;
+
             *)
                 echo "ERROR: $basis is not a supported basis --- Exiting..."
                 exit 1
@@ -404,6 +421,7 @@ if [[ ${Setall_flag} == true ]] ; then
     elif [[ ${ID_flag} == true ]] ; then ID_list=($(pwd | tee /dev/tty))
     elif [[ ${TD_flag} == true ]] ; then TD_list=($(pwd | tee /dev/tty))
     elif [[ ${Aug2_flag} == true ]] ; then Aug2_list=($(pwd | tee /dev/tty))
+    elif [[ ${Cu_flag} == true ]] ; then Cu_list=($(pwd | tee /dev/tty))
     fi
 else
     if [[ ${Li_flag} == true ]] ; then
@@ -442,6 +460,10 @@ else
         echo "    Tier2_aug2:"
         Aug2_list=($(find $(pwd) -type d -iname 'aug2' -o -iname 'tier2_aug2' -o -iname '*_then_tier2_aug2' -o -iname 'non-standard_tier2_aug2' 2>/dev/null | tee /dev/tty))
     fi
+    if [[ ${Cu_flag} == true ]] ; then
+        echo "    Custom:"
+        Cu_list=($(find $(pwd) -type d -iname 'cu' -o -iname 'custom' 2>/dev/null | tee /dev/tty))
+    fi
 fi
 echo "------------------------------------------------------"
 echo "Do you want to set the basis for all control.in files"
@@ -464,6 +486,7 @@ if [[ ${LDr_flag} == true ]] ; then Construct_basis "$LDr_dir" "${LDr_list[@]}" 
 if [[ ${ID_flag} == true ]] ; then Construct_basis "$ID_dir" "${ID_list[@]}" ; fi
 if [[ ${TD_flag} == true ]] ; then Construct_basis "$TD_dir" "${TD_list[@]}" ; fi
 if [[ ${Aug2_flag} == true ]] ; then Construct_basis "$Aug2_dir" "${Aug2_list[@]}" ; fi
+if [[ ${Cu_flag} == true ]] ; then Construct_basis "$Cu_dir" "${Cu_list[@]}" ; fi
 
 
 
