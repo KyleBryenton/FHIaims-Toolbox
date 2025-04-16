@@ -10,6 +10,12 @@ print_fhiaims=true
 print_tex=true
 print_xdmsetter=false
 
+# Set the mode for handling BJ and BJ0 merging:
+# 1) Merge your BJ and BJ0 result files together and keep all results
+# 2) Merge your BJ and BJ0 result files together, and remove all that have a negative a1 or a2
+# 3) Intelligently merge the results together, only inserting BJ0 (or BJa20) where BJ gives a negative a1 or a2 
+mode=3
+
 if [ $# == 0 ]; then
     echo "ERROR: No result files selected. Exiting.     " >&2
     echo "USAGE: 1) $0 kb49.results kb49_BJ0.results ..." >&2
@@ -35,16 +41,45 @@ for res in "$@" ; do
         | awk '{printf "%-32s %-14s %-12s %-12s %-7s %-7s %-5s\n", $1, $2, $3, $4, $6, $7, $5}' \
         > ${res%.*}.pfd_temp # Process Fit Driver Temp
 done
-# If multiple result files were provided, combine, and remove any that have negative values for a1
-# This will effectively merge datasets between BJ damping, and BJ0 damping. 
-cat *.pfd_temp \
-    | sort --version-sort \
-    | awk '($3 >= 0 && $4 >= 0)' \
-    | sed '1i\Basis                            Functional     a1           a2(ang)      MAD     MAPD    nset' \
-    | sed '/^[[:space:]]*$/d' \
-    > ${res%.*}.dat 
-    # This .dat will contain all data needed for other "print_format" flags specified in the header. 
+# Merge multiple result files into one dataset.
+# Mode is set in the header. This helps handle the merging of BJ and BJ0 results.
+case $mode in
+1)
+    cat *.pfd_temp \
+      | sort -k1,1 -k2,2V \
+      | sed '1i\Basis                            Functional     a1           a2(ang)      MAD     MAPD    nset' \
+      | sed '/^[[:space:]]*$/d' \
+      > ${res%.*}.dat
+    ;;
+2)
+    cat *.pfd_temp \
+      | sort -k1,1 -k2,2V \
+      | awk '($3 >= 0 && $4 >= 0)' \
+      | sed '1i\Basis                            Functional     a1           a2(ang)      MAD     MAPD    nset' \
+      | sed '/^[[:space:]]*$/d' \
+      > ${res%.*}.dat
+    ;;
+3)  {
+    echo "Basis                            Functional     a1           a2(ang)      MAD     MAPD    nset"
+    awk '{print $1, $2}' *.pfd_temp | sort -u | while read -r basis func; do
+        matches=$(awk -v b="$basis" -v f="$func" '$1 == b && $2 == f' *.pfd_temp)
+        # Skip group if all entries are invalid or missing
+        [[ -z "$matches" ]] && continue
+        # Remove any with negative a1 or a2
+        clean=$(awk '$3 >= 0 && $4 >= 0' <<< "$matches")
+        [[ -z "$clean" ]] && continue
+        # Prefer ones with non-zero a1 and a2
+        preferred=$(awk '$3 != 0 && $4 != 0' <<< "$clean")
+        if [[ -n "$preferred" ]]; then
+          echo "$preferred"
+        else
+          echo "$clean"
+        fi
+    done | sort -k1,1 -k2,2V
+    } > ${res%.*}.dat
+esac
 rm *.pfd_temp
+
 
 
 # The .param format. 
