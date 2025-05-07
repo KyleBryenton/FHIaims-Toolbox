@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessGMTKN55.sh
-# Kyle Bryenton - 2025-01-25
+# Kyle Bryenton - 2025-05-05
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
@@ -147,6 +147,25 @@ for j in "${!args[@]}" ; do
     wtmad2[$j]=$(echo "${wtmad2[$j]} / $tot_systems" | bc -l)
 done
 
+# Calculate WTMAD-3
+# \text{WTMAD-3} = \sum_{i=1}^{55} \frac{n_{i}^{\text{damp}}}{n_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
+declare -a wtmad3
+ni_max=$(echo "0.1 * $tot_systems" | bc -l)
+tot_deltaEs=$(printf "%s\n" "${deltaEs[@]}" | awk '{sum+=$1} END {print sum}')
+for j in "${!args[@]}" ; do
+    wtmad3[$j]=0.0
+    for i in "${!subsets[@]}" ; do
+        if (( $(echo "${systems[$i]} > $ni_max" | bc -l) )) ; then
+            ni_damp=$ni_max
+        else
+            ni_damp=${systems[$i]}
+        fi
+        wtmad3_elem=$(echo " ($ni_damp / $tot_systems) * ($tot_deltaEs / ${deltaEs[$i]}) * ${mad_array["$i,$j"]}" | bc -l)
+        wtmad3[$j]=$(echo "${wtmad3[$j]} + $wtmad3_elem" | bc -l)
+    done
+done
+
+
 # Print Header
 printf "%-${cw}s %-${cw}s %-${cw}s | " "Subset" "N.Systems" "DeltaEBar"
 for inFile in "$@"; do
@@ -176,3 +195,11 @@ for j in "${!args[@]}" ; do
     printf "%-${cw}.2f " "${wtmad2[$j]}"
 done
 printf "\n"
+
+# Print WTMAD-3 Final Row
+printf "%-${cw}s %-${cw}s %-${cw}s : " " | WTMAD-3" "" ""
+for j in "${!args[@]}" ; do
+    printf "%-${cw}.2f " "${wtmad3[$j]}"
+done
+printf "\n"
+
