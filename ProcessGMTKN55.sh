@@ -114,11 +114,11 @@ declare -A mad_array
 for i in "${!subsets[@]}" ; do
     subset="${subsets[$i]}"
     n_syst="${systems[$i]}"
-    # eval_driver.m will print 9 extra rows for headers and error metrics per subset
-    n_line=$(($n_syst + 9))
+    # eval_driver.m prints 9 extra rows of extra data per subset, minus 1 for the din row = n_syst + 8
+    n_line=$(($n_syst + 8))
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
-        mad_value=$(grep -A "$n_line" "${subset}.din" "$inFile" | grep "MAE" | awk '{print $NF}')
+        mad_value=$(grep -A "$n_line" "^## data dir:.*${subset}$" "$inFile" | grep "MAE" | awk '{print $NF}')
         mad_array["$i,$j"]="$mad_value"
     done
 done
