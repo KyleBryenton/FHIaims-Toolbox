@@ -96,9 +96,12 @@ done
 tot_input=$#
 tot_subsets=${#subsets[@]}
 tot_systems=$(printf "%s\n" "${systems[@]}" | awk '{sum+=$1} END {print sum}')
-printf "%s %d \n" "Number of Inputs: " "$tot_input"
-printf "%s %d \n" "Number of Subsets:" "$tot_subsets"
-printf "%s %d \n" "Number of Systems:" "$tot_systems"
+tot_deltaEs=$(printf "%s\n" "${deltaEs[@]}" | awk '{sum+=$1} END {print sum}')
+deltaEBar_tot=$(echo $tot_deltaEs/$tot_subsets | bc -l)
+printf "Number of Inputs:   %d\n"   "$tot_input"
+printf "Number of Subsets:  %d\n"   "$tot_subsets"
+printf "Number of Systems:  %d\n"   "$tot_systems"
+printf "DeltaEBar_Total:    %.2f\n" "$deltaEBar_tot"
 
 # Set the column width to max(10, longest input file name)
 cw=11
@@ -132,26 +135,26 @@ for j in "${!args[@]}" ; do
         wtmad1_elem=$(echo "${weights[$i]} * ${mad_array["$i,$j"]}" | bc -l)
         wtmad1[$j]=$(echo "${wtmad1[$j]} + $wtmad1_elem" | bc -l)
     done
-    wtmad1[$j]=$(echo "${wtmad1[$j]} / 55.0" | bc -l)
+    wtmad1[$j]=$(echo "${wtmad1[$j]} / $tot_subsets" | bc -l)
 done
 
 # Calculate WTMAD-2
-# \text{WTMAD-2} = \frac{1}{\sum_{i=1}^{55} N_{i}} \cdot \sum_{i=1}^{55} N_{i} \cdot \frac{56.84 \text{ kcal/mol}}{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
+#\text{WTMAD-2} = \sum_{i=1}^{55} \frac{N_{i}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
 declare -a wtmad2
 for j in "${!args[@]}" ; do
     wtmad2[$j]=0.0
     for i in "${!subsets[@]}" ; do
-        wtmad2_elem=$(echo "${systems[$i]} * 56.84 * ${mad_array["$i,$j"]} / ${deltaEs[$i]}" | bc -l)
+        wtmad2_elem=$(echo "${systems[$i]} * $deltaEBar_tot * ${mad_array["$i,$j"]} / ${deltaEs[$i]}" | bc -l)
         wtmad2[$j]=$(echo "${wtmad2[$j]} + $wtmad2_elem" | bc -l)
     done
     wtmad2[$j]=$(echo "${wtmad2[$j]} / $tot_systems" | bc -l)
 done
 
 # Calculate WTMAD-3
-# \text{WTMAD-3} = \sum_{i=1}^{55} \frac{n_{i}^{\text{damp}}}{n_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
+# \text{WTMAD-3} = \sum_{i=1}^{55} \frac{N_{i}^{\text{damp}}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
+# N_i^{\text{damp}} = \max(0.1 \, N_{\text{total}} \, , \, N_i)
 declare -a wtmad3
-ni_max=$(echo "0.1 * $tot_systems" | bc -l)
-tot_deltaEs=$(printf "%s\n" "${deltaEs[@]}" | awk '{sum+=$1} END {print sum}')
+ni_max=$(echo "0.01 * $tot_systems" | bc -l)
 for j in "${!args[@]}" ; do
     wtmad3[$j]=0.0
     for i in "${!subsets[@]}" ; do
@@ -160,9 +163,10 @@ for j in "${!args[@]}" ; do
         else
             ni_damp=${systems[$i]}
         fi
-        wtmad3_elem=$(echo " ($ni_damp / $tot_systems) * ($tot_deltaEs / ${deltaEs[$i]}) * ${mad_array["$i,$j"]}" | bc -l)
+        wtmad3_elem=$(echo " $ni_damp * $deltaEBar_tot * ${mad_array["$i,$j"]} / ${deltaEs[$i]}" | bc -l)
         wtmad3[$j]=$(echo "${wtmad3[$j]} + $wtmad3_elem" | bc -l)
     done
+    wtmad3[$j]=$(echo "${wtmad3[$j]} / $tot_systems" | bc -l)
 done
 
 
