@@ -103,8 +103,8 @@ printf "Number of Subsets:  %d\n"   "$tot_subsets"
 printf "Number of Systems:  %d\n"   "$tot_systems"
 printf "DeltaEBar_Total:    %.2f\n" "$deltaEBar_tot"
 
-# Set the column width to max(10, longest input file name)
-cw=11
+# Set the column width to max(12, longest input file name)
+cw=12
 for inFile in "$@" ; do
     lenFilename=$(expr length "${inFile%.results}")
     if [ $((lenFilename + 1)) -gt $cw ] ; then
@@ -127,7 +127,7 @@ for i in "${!subsets[@]}" ; do
 done
 
 # Calculate WTMAD-1
-# \text{WTMAD-1} = \frac{1}{55} \sum_{i=1}^{55} w_{i} \cdot \text{MAD}_{i}
+# \text{WTMAD-1} = \frac{1}{N_{\text{Bench}}} \sum_{i=1}^{N_{\text{Bench}}} w_{i} \cdot \text{MAD}_{i}
 declare -a wtmad1
 for j in "${!args[@]}" ; do
     wtmad1[$j]=0.0
@@ -139,7 +139,7 @@ for j in "${!args[@]}" ; do
 done
 
 # Calculate WTMAD-2
-#\text{WTMAD-2} = \sum_{i=1}^{55} \frac{N_{i}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
+#\text{WTMAD-2} = \sum_{i=1}^{N_{\text{Bench}}} \frac{N_{i}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
 declare -a wtmad2
 for j in "${!args[@]}" ; do
     wtmad2[$j]=0.0
@@ -151,7 +151,7 @@ for j in "${!args[@]}" ; do
 done
 
 # Calculate WTMAD-3
-# \text{WTMAD-3} = \sum_{i=1}^{55} \frac{N_{i}^{\text{damp}}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
+# \text{WTMAD-3} = \sum_{i=1}^{N_{\text{Bench}}} \frac{N_{i}^{\text{damp}}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
 # N_i^{\text{damp}} = \max(0.1 \, N_{\text{total}} \, , \, N_i)
 declare -a wtmad3
 ni_max=$(echo "0.01 * $tot_systems" | bc -l)
@@ -167,6 +167,20 @@ for j in "${!args[@]}" ; do
         wtmad3[$j]=$(echo "${wtmad3[$j]} + $wtmad3_elem" | bc -l)
     done
     wtmad3[$j]=$(echo "${wtmad3[$j]} / $tot_systems" | bc -l)
+done
+
+# Calculate WTMAD- 1.5
+# Proposed by E R Johnson to remove the N_i/N_total term so each benchmark is weighted the same. 
+# K R Bryenton dividing through by Nbench to keep the values of roughly the same scale 
+#\text{WTMAD-1.5} =  \frac{1}{N_{\text{Bench}}} \sum_{i=1}^{N_{\text{Bench}}} \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
+declare -a wtmad15
+for j in "${!args[@]}" ; do
+    wtmad15[$j]=0.0
+    for i in "${!subsets[@]}" ; do
+        wtmad15_elem=$(echo "$deltaEBar_tot * ${mad_array["$i,$j"]} / ${deltaEs[$i]}" | bc -l)
+        wtmad15[$j]=$(echo "${wtmad15[$j]} + $wtmad15_elem" | bc -l)
+    done
+    wtmad15[$j]=$(echo "${wtmad15[$j]} / $tot_subsets" | bc -l)
 done
 
 
@@ -204,6 +218,13 @@ printf "\n"
 printf "%-${cw}s %-${cw}s %-${cw}s : " " | WTMAD-3" "" ""
 for j in "${!args[@]}" ; do
     printf "%-${cw}.2f " "${wtmad3[$j]}"
+done
+printf "\n"
+
+# Print WTMAD-1.5 Final Row
+printf "%-${cw}s %-${cw}s %-${cw}s : " " | WTMAD-1.5" "" ""
+for j in "${!args[@]}" ; do
+    printf "%-${cw}.2f " "${wtmad15[$j]}"
 done
 printf "\n"
 
