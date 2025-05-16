@@ -93,11 +93,11 @@ GMTKN55_info=(
   "UPU23       23      5.72    10.0    4"
 )
 
-# Group names for partial benchmark statistics
+# Group names for partial benchmark statistics, the last one should be the full GMTKN55 set with all inputs.
 group_names=( "basicsmall" "isolarge" "barriers" "intermolNCI" "intramolNCI" "allNCI" "GMTKN55" )
 
-
-
+# Get index of full GMTKN55 group, used for ni_max and DeltaEBar_Mean definitions, and some print statements
+index_GMTKN55=$(( ${#group_names[@]} - 1 ))
 
 
 
@@ -119,7 +119,7 @@ declare -a deltEBs_mean
 
 # Initialize arrays
 declare -a index
-for g in {0..6}; do
+for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
     index[$g]=0
     subsets_total[$g]=0
     systems_total[$g]=0
@@ -159,9 +159,9 @@ for info in "${GMTKN55_info[@]}"; do
 done
 
 # Calculate deltaEBar_mean for each group
-for g in {0..6}; do
+for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
     if (( deltaEBarMean_Type == 0 )) ; then
-        deltEBs_mean[$g]=$(echo "${deltEBs_total[6]} / ${subsets_total[6]}" | bc -l)
+        deltEBs_mean[$g]=$(echo "${deltEBs_total[$index_GMTKN55]} / ${subsets_total[$index_GMTKN55]}" | bc -l)
     elif (( deltaEBarMean_Type == 1 )) ; then
         deltEBs_mean[$g]=$(echo "${deltEBs_total[$g]} / ${subsets_total[$g]}" | bc -l)
     else
@@ -179,11 +179,11 @@ for g in "${!subsets_total[@]}" ; do
 done
 
 # Print GMTKN55 Input Statistics
-printf "%s statistics:\n" "${group_names[6]}"
-printf "  Number of Subsets:  %d\n" "${subsets_total[6]}"
-printf "  Number of Systems:  %d\n" "${systems_total[6]}"
-printf "  DeltaEBar_Total:    %.2f\n" "${deltEBs_total[6]}"
-printf "  DeltaEBar_Mean:     %.2f\n" "${deltEBs_mean[6]}" 
+printf "%s statistics:\n" "${group_names[$index_GMTKN55]}"
+printf "  Number of Subsets:  %d\n" "${subsets_total[$index_GMTKN55]}"
+printf "  Number of Systems:  %d\n" "${systems_total[$index_GMTKN55]}"
+printf "  DeltaEBar_Total:    %.2f\n" "${deltEBs_total[$index_GMTKN55]}"
+printf "  DeltaEBar_Mean:     %.2f\n" "${deltEBs_mean[$index_GMTKN55]}" 
 
 
 # Set the column width to max(12, longest input file name)
@@ -221,12 +221,12 @@ done
 # Initialize wtmad arrays for each group and functional
 declare -A wtmad1 wtmad2 wtmad3 wtmad15
 for j in "${!args[@]}"; do
-  for g in {0..6}; do
-    wtmad1["$g,$j"]=0.0
-    wtmad2["$g,$j"]=0.0
-    wtmad3["$g,$j"]=0.0
-    wtmad15["$g,$j"]=0.0
-  done
+    for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
+        wtmad1["$g,$j"]=0.0
+        wtmad2["$g,$j"]=0.0
+        wtmad3["$g,$j"]=0.0
+        wtmad15["$g,$j"]=0.0
+    done
 done
 
 # Calculate WTMAD-1
@@ -252,7 +252,7 @@ done
 # Calculate WTMAD-3
 # \text{WTMAD-3} = \sum_{i=1}^{N_{\text{Bench}}} \frac{N_{i}^{\text{damp}}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
 # N_i^{\text{damp}} = \max(0.01 \, N_{\text{total}} \, , \, N_i)
-ni_max=$(echo "0.01 * ${systems_total[$g]}" | bc -l)
+ni_max=$(echo "0.01 * ${systems_total[$index_GMTKN55]}" | bc -l)
 for j in "${!args[@]}" ; do
     for g_i in "${!subsets[@]}"; do
         IFS=',' read -r g i <<< "$g_i"
@@ -295,10 +295,10 @@ done
 printf "\n"
 
 # Print MAD rows for full GMTKN55
-for (( i=0 ; i<subsets_total[6] ; i++ )) ; do
-    printf "%-${cw}s %-${cw}s %-${cw}s | " "${subsets["6,$i"]}" "${systems["6,$i"]}" "${deltEBs["6,$i"]}"
+for (( i=0 ; i<subsets_total[$index_GMTKN55] ; i++ )) ; do
+    printf "%-${cw}s %-${cw}s %-${cw}s | " "${subsets["$index_GMTKN55,$i"]}" "${systems["$index_GMTKN55,$i"]}" "${deltEBs["$index_GMTKN55,$i"]}"
     for j in "${!args[@]}" ; do
-        printf "%-${cw}.2f " "${mad_array["6,$i,$j"]}"
+        printf "%-${cw}.2f " "${mad_array["$index_GMTKN55,$i,$j"]}"
     done
     printf "\n"
 done
@@ -306,42 +306,42 @@ done
 # Print WTMAD-1
 printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-1" "-" "-"
 for j in "${!args[@]}" ; do
-    printf "%-${cw}.2f " "${wtmad1["6,$j"]}"
+    printf "%-${cw}.2f " "${wtmad1["$index_GMTKN55,$j"]}"
 done
 printf "\n"
 
 # Print WTMAD-2
 printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-2" "-" "-"
 for j in "${!args[@]}" ; do
-    printf "%-${cw}.2f " "${wtmad2["6,$j"]}"
+    printf "%-${cw}.2f " "${wtmad2["$index_GMTKN55,$j"]}"
 done
 printf "\n"
 
 # Print WTMAD-3
 printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-3" "-" "-"
 for j in "${!args[@]}" ; do
-    printf "%-${cw}.2f " "${wtmad3["6,$j"]}"
+    printf "%-${cw}.2f " "${wtmad3["$index_GMTKN55,$j"]}"
 done
 printf "\n"
 
 # Print WTMAD-1.5
 printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-1.5" "-" "-"
 for j in "${!args[@]}" ; do
-    printf "%-${cw}.2f " "${wtmad15["6,$j"]}"
+    printf "%-${cw}.2f " "${wtmad15["$index_GMTKN55,$j"]}"
 done
 printf "\n"
 
 # Print Summary Table
 printf "%s\n" "...Summary Table..."
 printf "%-${cw}s " "WTMAD-2"
-for g in {0..6} ; do
+for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
     printf "%-${cw}s " "${group_names[$g]}"
 done
 printf "\n"
 for j in "${!args[@]}" ; do
     inFile="${args[$j]}"
     printf "%-${cw}s " "${inFile%.results}"
-    for g in {0..6} ; do
+    for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
         printf "%-${cw}.2f " "${wtmad2["$g,$j"]}"
     done
     printf "\n"
@@ -370,8 +370,7 @@ if (( partialStatsReport == 0 )) ; then
     printf "\n"
     
     # Print Full GMTKN55 Statistics
-    for g in {0..6}; do
-    
+    for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
         # Group and Metrics
         printf "%s statistics:\n" "${group_names[$g]}"
         printf "  Number of Subsets:  %d\n" "${subsets_total[$g]}"
