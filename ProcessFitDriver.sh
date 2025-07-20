@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessFitDriver.sh
-# Kyle Bryenton - 2025-04-15
+# Kyle Bryenton - 2025-07-20
 
 
 # Set these flags as desired.
@@ -38,7 +38,7 @@ for res in "$@" ; do
         | tr -d "\n" \
         | sed "s/\# /\n/g" \
         | sed -E "s/(a1 =|\|\| a2\(ang\) =|Dataset size =|MAD    =|MAPD   =)/ /g" \
-        | awk '{printf "%-32s %-14s %-12s %-12s %-7s %-7s %-5s\n", $1, $2, $3, $4, $6, $7, $5}' \
+        | awk '{printf "%-32s %-20s %-12s %-16s %-7s %-7s %-5s\n", $1, $2, $3, $4, $6, $7, $5}' \
         > ${res%.*}.pfd_temp # Process Fit Driver Temp
 done
 # Merge multiple result files into one dataset.
@@ -47,7 +47,7 @@ case $mode in
 1)
     cat *.pfd_temp \
       | sort -k1,1 -k2,2V \
-      | sed '1i\Basis                            Functional     a1           a2(ang)      MAD     MAPD    nset' \
+      | sed '1i\Basis                            Functional           a1           a2(ang)          MAD     MAPD    nset' \
       | sed '/^[[:space:]]*$/d' \
       > ${res%.*}.dat
     ;;
@@ -55,12 +55,12 @@ case $mode in
     cat *.pfd_temp \
       | sort -k1,1 -k2,2V \
       | awk '($3 >= 0 && $4 >= 0)' \
-      | sed '1i\Basis                            Functional     a1           a2(ang)      MAD     MAPD    nset' \
+      | sed '1i\Basis                            Functional           a1           a2(ang)          MAD     MAPD    nset' \
       | sed '/^[[:space:]]*$/d' \
       > ${res%.*}.dat
     ;;
 3)  {
-    echo "Basis                            Functional     a1           a2(ang)      MAD     MAPD    nset"
+    echo "Basis                            Functional           a1           a2(ang)          MAD     MAPD    nset"
     awk '{print $1, $2}' *.pfd_temp | sort -u | while read -r basis func; do
         matches=$(awk -v b="$basis" -v f="$func" '$1 == b && $2 == f' *.pfd_temp)
         # Skip group if all entries are invalid or missing
@@ -87,14 +87,14 @@ rm *.pfd_temp
 # So it can be pasted into Erin/Alberto's websites
 if [ $print_param == true ] ; then
     cat ${res%.*}.dat \
-        | awk '{printf "%-32s %-14s %-12s %-12s %-7s %-5s\n", $1, $2, $3, $4, $6, $7}' \
+        | awk '{printf "%-32s %-20s %-12s %-16s %-7s %-5s\n", $1, $2, $3, $4, $6, $7}' \
         | sed '1d' \
         | awk 'BEGIN {basis = ""} {
             if ($1 != basis) { 
                 if (basis != "") print "" ;
                 basis = $1 ;
                 print "# " basis ;
-                print "Functional     a1           a2(ang)      MAPD    nset" ;
+                print "Functional     a1           a2(ang)          MAPD    nset" ;
             }
             print substr($0, index($0, $2)) 
         }' \
@@ -107,7 +107,7 @@ fi
 if [ $print_fhiaims == true ] ; then
     cat ${res%.*}.dat \
         | awk '{printf "\"%s\" \"%s\" %sd0 %sd0 \n", $1, $2, $3, $4}' \
-        | awk '{printf "bj_entry(%-32s, %-16s, %-14s, %-14s), &\n", $1, $2, $3, $4}' \
+        | awk '{printf "damp_entry(%-32s, %-20s, %-14s, %-18s), &\n", $1, $2, $3, $4}' \
         | sed '1d' \
         > ${res%.*}.fhiaims
 fi
@@ -125,10 +125,10 @@ if [ $print_tex == true ] ; then
     percent errors (MAPE) for the KB49 fit set are also shown. All numbers are for new parameters. \\\\}
 \\begin{tabular}{lccrr}
 \\hline
-Functional     & a1           & a2(ang)      & MAD     & MAPD \\\\
+Functional           & a1           & a2(ang)          & MAD     & MAPD \\\\
 EOF
     cat ${res%.*}.dat \
-        | awk -F ' ' '{printf "%s & %-14s & %-12s & %-12s & %-7s & %-7s \\\\ \n", $1, $2, $3, $4, $5, $6}' \
+        | awk -F ' ' '{printf "%s & %-20s & %-12s & %-16s & %-7s & %-7s \\\\ \n", $1, $2, $3, $4, $5, $6}' \
         | sed '1d' \
         | awk -F ' & ' 'BEGIN {basis = ""} {
             if ($1 != basis) {
