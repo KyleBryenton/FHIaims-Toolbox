@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessEvalDriver.sh
-# Kyle Bryenton - 2025-05-07
+# Kyle Bryenton - 2025-07-20
 
 if [ $# == 0 ]; then
     echo "ERROR: No result files selected. Exiting.     " >&2
@@ -59,7 +59,7 @@ header=$(awk -v n="$((n+2))" 'BEGIN {
 }')
 {
     echo "$header"
-    cat *.ped_temp | sed '/^[[:space:]]*$/d'
+    cat *.ped_temp | sed '/^[[:space:]]*$/d' | sort -k1,1 -k2,2V -k3,3V #Note, this may have to change depending on how many lines are kept
 } > "${res%.*}.dat"
 rm *.ped_temp
 
