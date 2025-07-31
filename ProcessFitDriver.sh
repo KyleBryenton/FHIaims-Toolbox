@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessFitDriver.sh
-# Kyle Bryenton - 2025-07-20
+# Kyle Bryenton - 2025-07-31
 
 
 # Set these flags as desired.
@@ -94,7 +94,7 @@ if [ $print_param == true ] ; then
                 if (basis != "") print "" ;
                 basis = $1 ;
                 print "# " basis ;
-                print "Functional     a1           a2(ang)          MAPD    nset" ;
+                print "Functional           a1           a2(ang)          MAPD    nset" ;
             }
             print substr($0, index($0, $2)) 
         }' \
