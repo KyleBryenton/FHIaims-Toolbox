@@ -7,6 +7,7 @@
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
 #    The order you want the results in is located at the top of the file
 #    Each .results file will print either the MAE or ME as a column in the output
+#    The script formally works with any extension. Don't include non-extension periods in your filenames. 
 #set -euxo pipefail
 
 # Check for input files
@@ -237,7 +238,7 @@ printf "\n"
 # Set the column width to max(12, longest input file name)
 cw=12
 for inFile in "$@" ; do
-    lenFilename=$(expr length "${inFile%.results}")
+    lenFilename=$(expr length "${inFile%.*}")
     if [ $((lenFilename + 1)) -gt $cw ] ; then
         cw=$((lenFilename + 1))
     fi
@@ -261,23 +262,57 @@ for g_i in "${!subsets[@]}"; do  # key is "g_i"
     fi
     for j in "${!args[@]}"; do
         inFile="${args[$j]}"
-        mad_value=$(grep -A "$n_line" "^## data dir:.*${subset}[[:space:]]*$" "$inFile" | grep "MAE" | awk '{print $NF}')
-        if [[ $(wc -l <<< "$mad_value") -ne 1 ]]; then
+        mad_value=$(grep -A "$n_line" "^## data dir:.*${subset}[[:space:]]*$" "$inFile" | tail -n +2 | grep "MAE\|MAD" | awk '{print $NF}')
+        if [[ $(wc -l <<< "$mad_value") -ne 1 ]] ; then
             echo "ERROR: Expected exactly 1 MAD value, got $(wc -l <<< "$mad_value")" >&2
             echo "   File: $inFile | Subset: $subset"                                 >&2
             echo "   Ensure your input data is free of errors."                       >&2
             echo "   Check your 'dataInput_Type' settable variable."                  >&2
+            echo "Raw values found:"                                                  >&2
+            echo "$mad_value"                                                         >&2
             exit 1
         fi
-        mad_array["$g,$i,$j"]="$mad_value" 
+        if ! [[ "$mad_value" =~ ^-?([0-9]+(\.[0-9]*)?|\.[0-9]+)$ ]] ; then
+            echo "ERROR: MAD value is non-numerical"                                  >&2
+            echo "   File: $inFile | Subset: $subset"                                 >&2
+            echo "   Ensure your input data is free of errors."                       >&2
+            echo "   Check your 'dataInput_Type' settable variable."                  >&2
+            echo "Raw values found:"                                                  >&2
+            echo "$mad_value"                                                         >&2
+            exit 1
+        fi
+        if awk '{exit ($1 <= 0 ? 0 : 1)}' <<< "$mad_value" ; then
+            echo "ERROR: MAD value is equal to or less than zero"                     >&2
+            echo "   File: $inFile | Subset: $subset"                                 >&2
+            echo "   Ensure your input data is free of errors."                       >&2
+            echo "   Check your 'dataInput_Type' settable variable."                  >&2
+            echo "Raw values found:"                                                  >&2
+            echo "$mad_value"                                                         >&2
+            exit 1
+        fi
+        mad_array["$g,$i,$j"]="$mad_value"
     done
 done
 
 
 
-
-
-
+## USEFUL FOR DEBUGGING
+#echo
+#printf "%-${cw}s %-${cw}s %-${cw}s | " "Subset" "N.Systems" "DeltaEBar"
+#for inFile in "$@" ; do
+#    printf "%-${cw}s " "${inFile%.*}"
+#done
+#printf "\n"
+#if ((print_mad == 1)) ; then
+#    for (( i=0 ; i<subsets_total[$index_GMTKN55] ; i++ )) ; do
+#        printf "%-${cw}s %-${cw}s %-${cw}s | " "${subsets["$index_GMTKN55,$i"]}" "${systems["$index_GMTKN55,$i"]}" "${deltEBs["$index_GMTKN55,$i"]}"
+#        for j in "${!args[@]}" ; do
+#            printf "%-${cw}.2f " "${mad_array["$index_GMTKN55,$i,$j"]}"
+#        done
+#        printf "\n"
+#    done
+#fi
+#exit 1
 
 # Calculate Errors
 
@@ -396,7 +431,7 @@ fi
 echo
 printf "%-${cw}s %-${cw}s %-${cw}s | " "Subset" "N.Systems" "DeltaEBar"
 for inFile in "$@" ; do
-    printf "%-${cw}s " "${inFile%.results}"
+    printf "%-${cw}s " "${inFile%.*}"
 done
 printf "\n"
 
@@ -487,7 +522,7 @@ if ((print_wtmad1_summary == 1)) ; then
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
-        printf "%-${cw}s " "${inFile%.results}"
+        printf "%-${cw}s " "${inFile%.*}"
         for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
             printf "%-${cw}.2f " "${wtmad1["$g,$j"]}"
         done
@@ -504,7 +539,7 @@ if ((print_wtmad2_summary == 1)) ; then
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
-        printf "%-${cw}s " "${inFile%.results}"
+        printf "%-${cw}s " "${inFile%.*}"
         for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
             printf "%-${cw}.2f " "${wtmad2["$g,$j"]}"
         done
@@ -521,7 +556,7 @@ if ((print_wtmad3_summary == 1)) ; then
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
-        printf "%-${cw}s " "${inFile%.results}"
+        printf "%-${cw}s " "${inFile%.*}"
         for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
             printf "%-${cw}.2f " "${wtmad3["$g,$j"]}"
         done
@@ -538,7 +573,7 @@ if ((print_wtmad15_summary == 1)) ; then
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
-        printf "%-${cw}s " "${inFile%.results}"
+        printf "%-${cw}s " "${inFile%.*}"
         for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
             printf "%-${cw}.2f " "${wtmad15["$g,$j"]}"
         done
@@ -555,7 +590,7 @@ if ((print_wtmad4_summary == 1)) ; then
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
-        printf "%-${cw}s " "${inFile%.results}"
+        printf "%-${cw}s " "${inFile%.*}"
         for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
             printf "%-${cw}.2f " "${wtmad4["$g,$j"]}"
         done
@@ -572,7 +607,7 @@ if ((print_wtmad4p_summary == 1)) ; then
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
-        printf "%-${cw}s " "${inFile%.results}"
+        printf "%-${cw}s " "${inFile%.*}"
         for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
             printf "%-${cw}.2f " "${wtmad4p["$g,$j"]}"
         done
@@ -616,7 +651,7 @@ if (( print_report == 1 )) ; then
         # Functional List
         printf "%-${cw}s %-${cw}s %-${cw}s | " "-" "-" "-"
         for inFile in "$@"; do
-            printf "%-${cw}s " "${inFile%.results}"
+            printf "%-${cw}s " "${inFile%.*}"
         done
         printf "\n"
     
