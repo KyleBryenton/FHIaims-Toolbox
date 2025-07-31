@@ -1,19 +1,13 @@
 #!/bin/bash
 
 # ProcessGMTKN55.sh
-# Kyle Bryenton - 2025-05-21
+# Kyle Bryenton - 2025-07-31
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
 #    The order you want the results in is located at the top of the file
 #    Each .results file will print either the MAE or ME as a column in the output
-
-
-
-
-
-
-
+#set -euxo pipefail
 
 # Check for input files
 if [ $# == 0 ]; then
@@ -23,37 +17,63 @@ if [ $# == 0 ]; then
 fi
 args=("$@")
 
-# For Groups "basic+ssmall, iso.+large, etc..." select which DeltaEBar_Mean to use:
-# 1 = Use the same as the full GMTKN55 (how Grimme presented his stats in the original work)
-# 2 = Recalculate DeltaEBar_Mean for each subset
+### USER SETABLE AREA ###
+
+## FLAG FOR IF YOU WANT PROGRESS REPORTS:
+ # 0 = false
+ # 1 = true
+print_progress=1
+
+## FLAG FOR IF YOU'RE SCRAPING OUTPUTS:
+ # This script reads eval_driver.m outputs. It checks for areas in the output matching the subsets in GMTKN55_info() via: 
+ #    mad_value=$(grep -A "$n_line" "^## data dir:.*${subset}[[:space:]]*$" "$inFile" | grep "MAE" | awk '{print $NF}')
+ # If you're scraping outputs, create a fake eval_driver ouput in the following format:
+ # ```
+ # ## data dir: ALK2X6
+ # MAD 1.2
+ # ## data dir: ALK8
+ # MAD 3.9
+ # ... etc
+ # ```
+ # 1 = Data input type is in eval_driver.m format, merged to contain all 55 benchmarks.
+ # 2 = Data input type is scraped data, alternating rows between `## data dir: <subset>` and `MAD <value>`
+dataInput_Type=1
+
+## FLAGS for deltaEBarMean control. Suggested = 1
+ # For Groups "basic+ssmall, iso.+large, etc..." select which DeltaEBar_Mean to use:
+ # 1 = Use the same as the full GMTKN55 (how Grimme presented his stats in the original work)
+ # 2 = Recalculate DeltaEBar_Mean for each subset
 deltaEBarMean_Type=1
 
-# Print Flags
-# 0 = false --- 1 = true
+## FLAGS TO CONTROL OUTPUT
+ # Note the report prints wtmadN only if ((print_wtmadN == 1 || print_wtmadN_summary == 1))
+ # 0 = false
+ # 1 = true
 print_mad=1
 print_wtmad1=1
 print_wtmad2=1
 print_wtmad3=1
-print_wtmad15=1
+print_wtmad15=0
 print_wtmad4=1
-print_wtmad4p=1
+print_wtmad4p=0
 print_wtmad1_summary=1
 print_wtmad2_summary=1
 print_wtmad3_summary=1
-print_wtmad15_summary=1
+print_wtmad15_summary=0
 print_wtmad4_summary=1
-print_wtmad4p_summary=1
+print_wtmad4p_summary=0
 print_report=1
 
-# Rearrange rows to change the subset ordering in the output.
-# Comment out a row to exclude that subset from the output.
-# All errors will adjust accordingly, automatically.
-#     Column 1: Subset Name
-#     Column 2: Number of systems in the subset
-#     Column 3: Average relative absolute energy \bar{|\Delta E|} in kcal/mol        [Used for WTMAD-2]
-#     Column 4: Weight (=10.0 if deltaE < 7.5, =0.1 if deltaE > 75, = 1.0 otherwise) [Used for WTMAD-1]
-#     Column 5: Indexing (0 = basicsmall, 1 = isolarge, 2 = barriers, 3 = intermolNCI, 4 = intramolNCI)
-#     Column 6: Weights such that each "typical" functional+DC gives equal weights for each benchmark. [Used for WTMAD-4]
+## REFERENCE DATA TABLE
+ # Rearrange rows to change the subset ordering in the output.
+ # Comment out a row to exclude that subset from the output.
+ # All errors will adjust accordingly, automatically.
+ #     Column 1: Subset Name
+ #     Column 2: Number of systems in the subset
+ #     Column 3: Average relative absolute energy \bar{|\Delta E|} in kcal/mol        [Used for WTMAD-2]
+ #     Column 4: Weight (=10.0 if deltaE < 7.5, =0.1 if deltaE > 75, = 1.0 otherwise) [Used for WTMAD-1]
+ #     Column 5: Indexing (0 = basicsmall, 1 = isolarge, 2 = barriers, 3 = intermolNCI, 4 = intramolNCI)
+ #     Column 6: Weights such that each "typical" functional+DC gives equal weights for each benchmark. [Used for WTMAD-4]
 GMTKN55_info=(
   "AL2X6        6     35.88     1.0    0    2.50"
   "ALK8         8     62.60     1.0    0    1.00"
@@ -111,20 +131,18 @@ GMTKN55_info=(
   "SCONF       17      4.60    10.0    4   10.00"
   "UPU23       23      5.72    10.0    4   10.00"
 )
-# Group names for partial benchmark statistics, the last one should be the full GMTKN55 set with all inputs.
+# Group names to display in partial benchmark statistics for the groups in col5 above
+# The last one should be the full GMTKN55 set with all inputs.
 group_names=( "basicsmall" "isolarge" "barriers" "intermolNCI" "intramolNCI" "allNCI" "GMTKN55" )
 
-# Get index of full GMTKN55 group, used for ni_max and DeltaEBar_Mean definitions, and some print statements
-index_GMTKN55=$(( ${#group_names[@]} - 1 ))
-
-
-
-
-
+### END USER SETTABLE AREA ###
 
 
 
 # Import Data
+
+# Get index of full GMTKN55 group, used for ni_max and DeltaEBar_Mean definitions, and some print statements
+index_GMTKN55=$(( ${#group_names[@]} - 1 ))
 
 # Declare associative arrays
 declare -A subsets
@@ -187,9 +205,9 @@ done
 
 # Calculate deltaEBar_mean for each group
 for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
-    if (( deltaEBarMean_Type == 1 )) ; then
+    if ((deltaEBarMean_Type == 1)) ; then
         deltEBs_mean[$g]=$(echo "${deltEBs_total[$index_GMTKN55]} / ${subsets_total[$index_GMTKN55]}" | bc -l)
-    elif (( deltaEBarMean_Type == 2 )) ; then
+    elif ((deltaEBarMean_Type == 2)) ; then
         deltEBs_mean[$g]=$(echo "${deltEBs_total[$g]} / ${subsets_total[$g]}" | bc -l)
     else
         echo "ERROR: DeltaEBarMean Type Not Supported. Exiting..." >&2
@@ -226,20 +244,34 @@ for inFile in "$@" ; do
 done
 
 # Fetch the Mean Absolute Errors (MAE or MAD) for each input
+if ((print_progress == 1)) ; then echo "Calculating:"  ; fi
+if ((print_progress == 1)) ; then echo "... MAD Array" ; fi
 declare -A mad_array
 for g_i in "${!subsets[@]}"; do  # key is "g_i"
     IFS=',' read -r g i <<< "$g_i"
     subset="${subsets["$g,$i"]}"
     n_syst="${systems["$g,$i"]}"
-    # eval_driver.m prints 9 extra rows of extra data per subset, minus 1 for the din row = n_syst + 8
-    n_line=$(( n_syst + 8 ))
+    if ((dataInput_Type == 1)) ; then   # eval_driver.m prints 9 extra rows / subset; - 1 for din. Thus = n_syst + 8
+        n_line=$(( n_syst + 8 ))
+    elif ((dataInput_Type == 2)) ; then # Used for scraped data, only need 1 row after subset detection.
+        n_line=1
+    else
+        echo "ERROR: dataInput_Type Type Not Supported. Exiting..." >&2
+        exit 1
+    fi
     for j in "${!args[@]}"; do
         inFile="${args[$j]}"
-        mad_value=$(grep -A "$n_line" "^## data dir:.*${subset}$" "$inFile" | grep "MAE" | awk '{print $NF}')
+        mad_value=$(grep -A "$n_line" "^## data dir:.*${subset}[[:space:]]*$" "$inFile" | grep "MAE" | awk '{print $NF}')
+        if [[ $(wc -l <<< "$mad_value") -ne 1 ]]; then
+            echo "ERROR: Expected exactly 1 MAD value, got $(wc -l <<< "$mad_value")" >&2
+            echo "   File: $inFile | Subset: $subset"                                 >&2
+            echo "   Ensure your input data is free of errors."                       >&2
+            echo "   Check your 'dataInput_Type' settable variable."                  >&2
+            exit 1
+        fi
         mad_array["$g,$i,$j"]="$mad_value" 
     done
 done
-
 
 
 
@@ -264,76 +296,93 @@ done
 
 # Calculate WTMAD-1
 # \text{WTMAD-1} = \frac{1}{N_{\text{Bench}}} \sum_{i=1}^{N_{\text{Bench}}} w_{i} \cdot \text{MAD}_{i}
-for j in "${!args[@]}" ; do
-    for g_i in "${!subsets[@]}" ; do
-        IFS=',' read -r g i <<< "$g_i"
-        wtmad1_elem=$(echo "${weights["$g,$i"]} * ${mad_array["$g,$i,$j"]} / ${subsets_total[$g]}" | bc -l)
-        wtmad1["$g,$j"]=$(echo "${wtmad1["$g,$j"]} + $wtmad1_elem" | bc -l)
+if ((print_wtmad1 == 1 || print_wtmad1_summary == 1)) ; then
+    if ((print_progress == 1)) ; then echo "... WTMAD-1" ; fi
+    for j in "${!args[@]}" ; do
+        for g_i in "${!subsets[@]}" ; do
+            IFS=',' read -r g i <<< "$g_i"
+            wtmad1_elem=$(echo "${weights["$g,$i"]} * ${mad_array["$g,$i,$j"]} / ${subsets_total[$g]}" | bc -l)
+            wtmad1["$g,$j"]=$(echo "${wtmad1["$g,$j"]} + $wtmad1_elem" | bc -l)
+        done
     done
-done
+fi
 
 # Calculate WTMAD-2
 #\text{WTMAD-2} = \sum_{i=1}^{N_{\text{Bench}}} \frac{N_{i}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
-for j in "${!args[@]}" ; do
-    for g_i in "${!subsets[@]}" ; do
-        IFS=',' read -r g i <<< "$g_i"
-        wtmad2_elem=$(echo "${systems["$g,$i"]} * ${deltEBs_mean[$g]} * ${mad_array["$g,$i,$j"]} / (${deltEBs["$g,$i"]} * ${systems_total[$g]})" | bc -l)
-        wtmad2["$g,$j"]=$(echo "${wtmad2["$g,$j"]} + $wtmad2_elem" | bc -l)
+if ((print_wtmad2 == 1 || print_wtmad2_summary == 1)) ; then
+    if ((print_progress == 1)) ; then echo "... WTMAD-2" ; fi
+    for j in "${!args[@]}" ; do
+        for g_i in "${!subsets[@]}" ; do
+            IFS=',' read -r g i <<< "$g_i"
+            wtmad2_elem=$(echo "${systems["$g,$i"]} * ${deltEBs_mean[$g]} * ${mad_array["$g,$i,$j"]} / (${deltEBs["$g,$i"]} * ${systems_total[$g]})" | bc -l)
+            wtmad2["$g,$j"]=$(echo "${wtmad2["$g,$j"]} + $wtmad2_elem" | bc -l)
+        done
     done
-done
+fi
 
 # Calculate WTMAD-3
 # \text{WTMAD-3} = \sum_{i=1}^{N_{\text{Bench}}} \frac{N_{i}^{\text{damp}}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
 # N_i^{\text{damp}} = \max(0.01 \, N_{\text{total}} \, , \, N_i)
-ni_max=$(echo "0.01 * ${systems_total[$index_GMTKN55]}" | bc -l)
-for j in "${!args[@]}" ; do
-    for g_i in "${!subsets[@]}"; do
-        IFS=',' read -r g i <<< "$g_i"
-        if (( $(echo "${systems["$g,$i"]} < $ni_max" | bc -l) )); then
-            ni_damp=${systems["$g,$i"]}
-        else
-            ni_damp=$ni_max
-        fi
-        wtmad3_elem=$(echo "$ni_damp * ${deltEBs_mean[$g]} * ${mad_array["$g,$i,$j"]} / (${deltEBs["$g,$i"]} * ${systems_total[$g]})" | bc -l)
-        wtmad3["$g,$j"]=$(echo "${wtmad3["$g,$j"]} + $wtmad3_elem" | bc -l)
+if ((print_wtmad3 == 1 || print_wtmad3_summary == 1)) ; then
+    if ((print_progress == 1)) ; then echo "... WTMAD-3" ; fi
+    ni_max=$(echo "0.01 * ${systems_total[$index_GMTKN55]}" | bc -l)
+    for j in "${!args[@]}" ; do
+        for g_i in "${!subsets[@]}"; do
+            IFS=',' read -r g i <<< "$g_i"
+            if (( $(echo "${systems["$g,$i"]} < $ni_max" | bc -l) )); then
+                ni_damp=${systems["$g,$i"]}
+            else
+                ni_damp=$ni_max
+            fi
+            wtmad3_elem=$(echo "$ni_damp * ${deltEBs_mean[$g]} * ${mad_array["$g,$i,$j"]} / (${deltEBs["$g,$i"]} * ${systems_total[$g]})" | bc -l)
+            wtmad3["$g,$j"]=$(echo "${wtmad3["$g,$j"]} + $wtmad3_elem" | bc -l)
+        done
     done
-done
+fi
 
 # Calculate WTMAD-1.5
-# Proposed by E R Johnson and K R Bryenton to remove the N_i term entirely so each benchmark is weighted the same.
+# Proposed by K R Bryenton and E R Johnson to remove the N_i term entirely so each benchmark is weighted the same.
 #\text{WTMAD-1.5} =  \frac{1}{N_{\text{Bench}}} \sum_{i=1}^{N_{\text{Bench}}} \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
-for j in "${!args[@]}" ; do
-    for g_i in "${!subsets[@]}" ; do
-        IFS=',' read -r g i <<< "$g_i"
-        wtmad15_elem=$(echo "${deltEBs_mean[$g]} * ${mad_array["$g,$i,$j"]} / (${deltEBs["$g,$i"]} * ${subsets_total[$g]})" | bc -l)
-        wtmad15["$g,$j"]=$(echo "${wtmad15["$g,$j"]} + $wtmad15_elem" | bc -l)
+if ((print_wtmad15 == 1 || print_wtmad15_summary == 1)) ; then
+    if ((print_progress == 1)) ; then echo "... WTMAD-1.5" ; fi
+    for j in "${!args[@]}" ; do
+        for g_i in "${!subsets[@]}" ; do
+            IFS=',' read -r g i <<< "$g_i"
+            wtmad15_elem=$(echo "${deltEBs_mean[$g]} * ${mad_array["$g,$i,$j"]} / (${deltEBs["$g,$i"]} * ${subsets_total[$g]})" | bc -l)
+            wtmad15["$g,$j"]=$(echo "${wtmad15["$g,$j"]} + $wtmad15_elem" | bc -l)
+        done
     done
-done
+fi
 
 # Calculate WTMAD-4
-# Proposed by E R Johnson and K R Bryenton to weigh each benchmark equivalently while taking into account their typical MAD values per benchmark on well-behaved functionals.
+# Proposed by K R Bryenton and E R Johnson to weigh each benchmark equivalently while taking into account their typical MAD values per benchmark on well-behaved functionals.
 # \text{WTMAD-4} = \frac{1}{N_{\text{Bench}}} \sum_{i=1}^{N_{\text{Bench}}} w_{i} \cdot \text{MAD}_{i}
-for j in "${!args[@]}" ; do
-    for g_i in "${!subsets[@]}" ; do
-        IFS=',' read -r g i <<< "$g_i"
-        wtmad4_elem=$(echo "${weights2["$g,$i"]} * ${mad_array["$g,$i,$j"]} / ${subsets_total[$g]}" | bc -l)
-        wtmad4["$g,$j"]=$(echo "${wtmad4["$g,$j"]} + $wtmad4_elem" | bc -l)
+if ((print_wtmad4 == 1 || print_wtmad4_summary == 1)) ; then
+    if ((print_progress == 1)) ; then echo "... WTMAD-4" ; fi
+    for j in "${!args[@]}" ; do
+        for g_i in "${!subsets[@]}" ; do
+            IFS=',' read -r g i <<< "$g_i"
+            wtmad4_elem=$(echo "${weights2["$g,$i"]} * ${mad_array["$g,$i,$j"]} / ${subsets_total[$g]}" | bc -l)
+            wtmad4["$g,$j"]=$(echo "${wtmad4["$g,$j"]} + $wtmad4_elem" | bc -l)
+        done
     done
-done
+fi
 
 # Calculate WTMAD-4'
-# Proposed by E R Johnson and K R Bryenton to rescale WTMAD-4 so each of the five main categories has equal weight
+# Proposed by K R Bryenton and E R Johnson to rescale WTMAD-4 so each of the five main categories has equal weight
 # \text{WTMAD-4g} =  \frac{1}{N_{\text{Cat.}}} \sum_{i=1}^{N_{\text{Cat.}}} \frac{1}{N_{\text{Bench,Cat.}}} \sum_{i=1}^{N_{\text{Bench,Cat.}}} w_{i,\text{Cat.}} \cdot \text{MAD}_{i,\text{Cat.}}
 # Alternatively, you calculate the WTMAD-4 for each each category (basic+small, iso+large, barriers, intermolNCI, intramolNCI) then take their mean.
-for j in "${!args[@]}" ; do
-    for g_i in "${!subsets[@]}" ; do
-        IFS=',' read -r g i <<< "$g_i"
-        wtmad4p_elem=$(echo "${weights2["$g,$i"]} * ${mad_array["$g,$i,$j"]} / ${subsets_total[$g]}" | bc -l)
-        wtmad4p["$g,$j"]=$(echo "${wtmad4p["$g,$j"]} + $wtmad4p_elem" | bc -l)
+if ((print_wtmad4p == 1 || print_wtmad4p_summary == 1)) ; then
+    if ((print_progress == 1)) ; then echo "... WTMAD-4'" ; fi
+    for j in "${!args[@]}" ; do
+        for g_i in "${!subsets[@]}" ; do
+            IFS=',' read -r g i <<< "$g_i"
+            wtmad4p_elem=$(echo "${weights2["$g,$i"]} * ${mad_array["$g,$i,$j"]} / ${subsets_total[$g]}" | bc -l)
+            wtmad4p["$g,$j"]=$(echo "${wtmad4p["$g,$j"]} + $wtmad4p_elem" | bc -l)
+        done
+        wtmad4p["$index_GMTKN55,$j"]=$(echo "0.2*(${wtmad4p["1,$j"]} + ${wtmad4p["2,$j"]} + ${wtmad4p["3,$j"]} + ${wtmad4p["4,$j"]} + ${wtmad4p["5,$j"]})" | bc -l)
     done
-    wtmad4p["$index_GMTKN55,$j"]=$(echo "0.2*(${wtmad4p["1,$j"]} + ${wtmad4p["2,$j"]} + ${wtmad4p["3,$j"]} + ${wtmad4p["4,$j"]} + ${wtmad4p["5,$j"]})" | bc -l)
-done
-
+fi
 
 
 
@@ -344,6 +393,7 @@ done
 # Print Output:
 
 # Print Header
+echo
 printf "%-${cw}s %-${cw}s %-${cw}s | " "Subset" "N.Systems" "DeltaEBar"
 for inFile in "$@" ; do
     printf "%-${cw}s " "${inFile%.results}"
@@ -424,9 +474,9 @@ fi
 
 # Print Summary Tables
 printf "\n"
-printf "%s\n" "-------------------"
-printf "%s\n" "   SUMMARY TABLE   "
-printf "%s\n" "-------------------"
+printf "%s\n" "--------------------"
+printf "%s\n" "   SUMMARY TABLES   "
+printf "%s\n" "--------------------"
 
 
 if ((print_wtmad1_summary == 1)) ; then
@@ -571,46 +621,58 @@ if (( print_report == 1 )) ; then
         printf "\n"
     
         # WTMAD-1
-        printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-1" "-" "-"
-        for j in "${!args[@]}" ; do
-            printf "%-${cw}.2f " "${wtmad1["$g,$j"]}"
-        done
-        printf "\n"
-        
+        if ((print_wtmad1 == 1 || print_wtmad1_summary == 1)) ; then
+            printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-1" "-" "-"
+            for j in "${!args[@]}" ; do
+                printf "%-${cw}.2f " "${wtmad1["$g,$j"]}"
+            done
+            printf "\n"
+        fi
+            
         # WTMAD-2
-        printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-2" "-" "-"
-        for j in "${!args[@]}" ; do
-            printf "%-${cw}.2f " "${wtmad2["$g,$j"]}"
-        done
-        printf "\n"
-        
+        if ((print_wtmad2 == 1 || print_wtmad2_summary == 1)) ; then
+            printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-2" "-" "-"
+            for j in "${!args[@]}" ; do
+                printf "%-${cw}.2f " "${wtmad2["$g,$j"]}"
+            done
+            printf "\n"
+        fi
+            
         # WTMAD-3
-        printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-3" "-" "-"
-        for j in "${!args[@]}" ; do
-            printf "%-${cw}.2f " "${wtmad3["$g,$j"]}"
-        done
-        printf "\n"
-        
+        if ((print_wtmad3 == 1 || print_wtmad3_summary == 1)) ; then
+            printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-3" "-" "-"
+            for j in "${!args[@]}" ; do
+                printf "%-${cw}.2f " "${wtmad3["$g,$j"]}"
+            done
+            printf "\n"
+        fi
+            
         # WTMAD-1.5
-        printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-1.5" "-" "-"
-        for j in "${!args[@]}" ; do
-            printf "%-${cw}.2f " "${wtmad15["$g,$j"]}"
-        done
-        printf "\n"
-
+        if ((print_wtmad15 == 1 || print_wtmad15_summary == 1)) ; then
+            printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-1.5" "-" "-"
+            for j in "${!args[@]}" ; do
+                printf "%-${cw}.2f " "${wtmad15["$g,$j"]}"
+            done
+            printf "\n"
+        fi
+        
         # WTMAD-4
-        printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-4" "-" "-"
-        for j in "${!args[@]}" ; do
-            printf "%-${cw}.2f " "${wtmad4["$g,$j"]}"
-        done
-        printf "\n"
-
+        if ((print_wtmad4 == 1 || print_wtmad4_summary == 1)) ; then
+            printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-4" "-" "-"
+            for j in "${!args[@]}" ; do
+                printf "%-${cw}.2f " "${wtmad4["$g,$j"]}"
+            done
+            printf "\n"
+        fi
+        
         # WTMAD-4'
-        printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-4'" "-" "-"
-        for j in "${!args[@]}" ; do
-            printf "%-${cw}.2f " "${wtmad4p["$g,$j"]}"
-        done
-        printf "\n"
+        if ((print_wtmad4p == 1 || print_wtmad4p_summary == 1)) ; then
+            printf "%-${cw}s %-${cw}s %-${cw}s | " "  WTMAD-4'" "-" "-"
+            for j in "${!args[@]}" ; do
+                printf "%-${cw}.2f " "${wtmad4p["$g,$j"]}"
+            done
+            printf "\n"
+        fi
 
     
         printf "\n"
