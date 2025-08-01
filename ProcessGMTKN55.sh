@@ -262,7 +262,7 @@ for g_i in "${!subsets[@]}"; do  # key is "g_i"
     fi
     for j in "${!args[@]}"; do
         inFile="${args[$j]}"
-        mad_value=$(grep -A "$n_line" "^## data dir:.*${subset}[[:space:]]*$" "$inFile" | tail -n +2 | grep "MAE\|MAD" | awk '{print $NF}')
+        mad_value=$(grep -i -A "$n_line" "^## data dir:.*${subset}[[:space:]]*$" "$inFile" | tail -n +2 | grep "MAE\|MAD" | awk '{print $NF}')
         if [[ $(wc -l <<< "$mad_value") -ne 1 ]] ; then
             echo "ERROR: Expected exactly 1 MAD value, got $(wc -l <<< "$mad_value")" >&2
             echo "   File: $inFile | Subset: $subset"                                 >&2
