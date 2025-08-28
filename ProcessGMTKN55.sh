@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessGMTKN55.sh
-# Kyle Bryenton - 2025-07-31
+# Kyle Bryenton - 2025-08-28
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
@@ -75,6 +75,8 @@ print_report=1
  #     Column 4: Weight (=10.0 if deltaE < 7.5, =0.1 if deltaE > 75, = 1.0 otherwise) [Used for WTMAD-1]
  #     Column 5: Indexing (0 = basicsmall, 1 = isolarge, 2 = barriers, 3 = intermolNCI, 4 = intramolNCI)
  #     Column 6: Weights such that each "typical" functional+DC gives equal weights for each benchmark. [Used for WTMAD-4]
+ # To obtain ref energies from your .din, use the following one-liner:
+ #     cat *.din | awk '/^0$/ { getline; print }' | awk '{sum+=sqrt($1*$1); n++} END {if(n>0) printf "%.2f\n", sum/n}'     
 GMTKN55_info=(
   "AL2X6        6     35.88     1.0    0    2.50"
   "ALK8         8     62.60     1.0    0    1.00"
@@ -100,7 +102,7 @@ GMTKN55_info=(
   "DARC        14     32.47     1.0    1    1.00"
   "ISO34       34     14.57     1.0    1    5.00"
   "ISOL24      24     21.92     1.0    1    2.50"
-  "MB16-43     43    414.73     0.1    1    0.50"
+  "MB16-43     43    468.39     0.1    1    0.50"
   "PArel       20      4.63    10.0    1    5.00"
   "RSE43       43      7.60     1.0    1   10.00"
   "BH76        76     18.61     1.0    2    2.50"
