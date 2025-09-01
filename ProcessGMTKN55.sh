@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessGMTKN55.sh
-# Kyle Bryenton - 2025-08-28
+# Kyle Bryenton - 2025-09-01
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
@@ -86,7 +86,7 @@ GMTKN55_info=(
   "DIPCS10     10    654.26     0.1    0    1.00"
   "FH51        51     31.01     1.0    0    2.50"
   "G21EA       25     33.62     1.0    0    2.50"
-  "G21IP       36    257.61     0.1    0    1.00"
+  "G21IP       36    257.61     0.1    0    2.50"
   "G2RC        25     51.26     1.0    0    1.00"
   "HEAVYSB11   11     58.02     1.0    0    2.50"
   "NBPRC       12     27.71     1.0    0    2.50"
@@ -104,12 +104,12 @@ GMTKN55_info=(
   "ISOL24      24     21.92     1.0    1    2.50"
   "MB16-43     43    468.39     0.1    1    0.50"
   "PArel       20      4.63    10.0    1    5.00"
-  "RSE43       43      7.60     1.0    1   10.00"
+  "RSE43       43      7.60     1.0    1    5.00"
   "BH76        76     18.61     1.0    2    2.50"
   "BHDIV10     10     45.33     1.0    2    1.00"
   "BHPERI      26     20.87     1.0    2    2.50"
   "BHROT27     27      6.27    10.0    2   10.00"
-  "INV24       24     31.85     1.0    2    2.50"
+  "INV24       24     31.85     1.0    2    5.00"
   "PX13        13     33.36     1.0    2    1.00"
   "WCPT18      18     34.99     1.0    2    1.00"
   "ADIM6        6      3.36    10.0    3   25.00"
@@ -121,9 +121,9 @@ GMTKN55_info=(
   "IL16        16    109.04     0.1    3   10.00"
   "PNICO23     23      4.27    10.0    3   10.00"
   "RG18        18      0.58    10.0    3   50.00"
-  "S22         22      7.30    10.0    3   10.00"
+  "S22         22      7.30    10.0    3   25.00"
   "S66         66      5.47    10.0    3   25.00"
-  "WATER27     27     81.14     0.1    3    1.00"
+  "WATER27     27     81.14     0.1    3    2.50"
   "ACONF       15      1.83    10.0    4   50.00"
   "Amino20x4   80      2.44    10.0    4   25.00"
   "BUT14DIOL   64      2.80    10.0    4   25.00"
