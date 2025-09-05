@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessGMTKN55.sh
-# Kyle Bryenton - 2025-09-01
+# Kyle Bryenton - 2025-09-04
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
@@ -38,13 +38,19 @@ print_progress=1
  # ```
  # 1 = Data input type is in eval_driver.m format, merged to contain all 55 benchmarks.
  # 2 = Data input type is scraped data, alternating rows between `## data dir: <subset>` and `MAD <value>`
-dataInput_Type=1
+dataInput_Type=2
 
 ## FLAGS for deltaEBarMean control. Suggested = 1
  # For Groups "basic+ssmall, iso.+large, etc..." select which DeltaEBar_Mean to use:
  # 1 = Use the same as the full GMTKN55 (how Grimme presented his stats in the original work)
  # 2 = Recalculate DeltaEBar_Mean for each subset
 deltaEBarMean_Type=1
+
+## FLAGS for deltaEBarMeanFixed control. Suggested = 1
+ # 1 = Let it autocalculate based on the GMTKN55_info table
+ # 2 = Override it to a specific value, given by deltEBs_fixed
+deltaEBarMeanFixed_Type=2
+deltEBs_fixed=56.84
 
 ## FLAGS TO CONTROL OUTPUT
  # Note the report prints wtmadN only if ((print_wtmadN == 1 || print_wtmadN_summary == 1))
@@ -213,7 +219,7 @@ for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
     elif ((deltaEBarMean_Type == 2)) ; then
         deltEBs_mean[$g]=$(echo "${deltEBs_total[$g]} / ${subsets_total[$g]}" | bc -l)
     else
-        echo "ERROR: DeltaEBarMean Type Not Supported. Exiting..." >&2
+        echo "ERROR: deltaEBarMean_Type Not Supported. Exiting..." >&2
         exit 1
     fi
 done
@@ -235,6 +241,28 @@ printf "  Number of Subsets:  %d\n" "${subsets_total[$index_GMTKN55]}"
 printf "  Number of Systems:  %d\n" "${systems_total[$index_GMTKN55]}"
 printf "  DeltaEBar_Total:    %.2f\n" "${deltEBs_total[$index_GMTKN55]}"
 printf "  DeltaEBar_Mean:     %.2f\n" "${deltEBs_mean[$index_GMTKN55]}" 
+
+# If DeltaEBar_Mean is being overridden, recalculate it and print it to the user
+if ((deltaEBarMeanFixed_Type == 1)) ; then
+printf "  DeltaEBar_Mean is NOT OVERRIDDEN. Using the calculated value: %.2f\n" "${deltEBs_mean[$index_GMTKN55]}"
+elif ((deltaEBarMeanFixed_Type == 2)) ; then
+    # Recalculate deltaEBar_mean for each group
+    for (( g=0 ; g<=index_GMTKN55 ; g++ )) ; do
+        if ((deltaEBarMean_Type == 1)) ; then
+            deltEBs_mean[$g]=$deltEBs_fixed
+        elif ((deltaEBarMean_Type == 2)) ; then
+            echo "ERROR: deltaEBarMean_Type==2 not supported with deltaEBarMeanFixed_Type==2. Exiting..." >&2
+            exit 1
+        else
+            echo "ERROR: deltaEBarMean_Type Not Supported. Exiting..." >&2
+            exit 1
+        fi
+    done
+    printf "  DeltaEBar_Mean is OVERRIDDEN. Using the fixed value: %.2f\n" "${deltEBs_mean[$index_GMTKN55]}"
+else
+    echo "ERROR: deltaEBarMeanFixed_Type Not Supported. Exiting..." >&2
+    exit 1
+fi
 printf "\n"
 
 # Set the column width to max(12, longest input file name)
