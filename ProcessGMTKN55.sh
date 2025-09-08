@@ -36,6 +36,8 @@ print_progress=1
  # MAD 3.9
  # ... etc
  # ```
+ # This script might be helpful:
+ #      for res in *.results ; do sed -i '/^## data dir:/!{/MAE       /!d}' res ; done
  # 1 = Data input type is in eval_driver.m format, merged to contain all 55 benchmarks.
  # 2 = Data input type is scraped data, alternating rows between `## data dir: <subset>` and `MAD <value>`
 dataInput_Type=2
