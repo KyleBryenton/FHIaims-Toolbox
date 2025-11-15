@@ -263,7 +263,6 @@ elif ((weight_Type == 3)) ; then
       "SCONF       17      4.60    10.0    4   19.1  " 
       "UPU23       23      5.72    10.0    4   10.1  " 
     )                                                   
-
 else
     echo "ERROR: weight_Type Not Supported. Exiting..." >&2
     exit 1
