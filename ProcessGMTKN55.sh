@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessGMTKN55.sh
-# Kyle Bryenton - 2025-11-15
+# Kyle Bryenton - 2025-11-17
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
@@ -515,7 +515,7 @@ fi
 
 # Calculate WTMAD-3
 # \text{WTMAD-3} = \sum_{i=1}^{N_{\text{Bench}}} \frac{N_{i}^{\text{damp}}}{N_{\text{total}}} \cdot \frac{ {\overline{|\Delta E|}_{\text{total}}}  }{\overline{|\Delta E|}_{i}} \cdot \text{MAD}_{i}
-# N_i^{\text{damp}} = \max(0.01 \, N_{\text{total}} \, , \, N_i)
+# N_i^{\text{damp}} = \min(0.01 \, N_{\text{total}} \, , \, N_i)
 if ((print_wtmad3 == 1 || print_wtmad3_summary == 1)) ; then
     if ((print_progress == 1)) ; then echo "... WTMAD-3" ; fi
     ni_max=$(echo "0.01 * ${systems_total[$index_GMTKN55]}" | bc -l)
