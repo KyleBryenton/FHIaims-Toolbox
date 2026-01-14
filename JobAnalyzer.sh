@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # JobAnalyzer.sh
-# Kyle Bryenton - 2024-09-15
+# Kyle Bryenton - 2026-01-14
 #
 #     This script will check your jobs to tell you if they crashed or not
 #     It sorts them into total jobs, unsubmitted, in queue, completed, and crashed
@@ -11,6 +11,11 @@
 #     To run it over multiple folders, you'd execute something like:
 #
 #     for dir in */ ; do cd $dir ; JobAnalyzer.sh ; cd .. ; done > JobAnalyzer.dat 
+#
+#     HELPFUL SCRIPT IF USING META FARMS:
+#     This will convert your crashed jobs in the JobAnalyzer.dat output to a new table.dat
+#
+#     cat JobAnalyzer.dat | sed '/^[^/]/d' | sed '/^[[:space:]]*$/d' | nl -nln > table.dat
 
 # Instantiation
 Total=0
