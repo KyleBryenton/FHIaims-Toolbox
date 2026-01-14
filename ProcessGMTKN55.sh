@@ -526,8 +526,17 @@ if ((print_wtmad4p == 1 || print_wtmad4p_summary == 1)) ; then
     done
 fi
 
-
-
+# Calculate Outlier Analysis
+# Proposed by E R Johnson and K R Bryenton in XDMz paper to detect outliers based off the functionals used for WTMAD-4 weights.
+if ((print_outlier_anlysis == 1)) ; then
+    if ((print_progress == 1)) ; then echo "... OUTLIER ANALYSIS" ; fi
+    for j in "${!args[@]}" ; do
+        for g_i in "${!subsets[@]}" ; do
+            IFS=',' read -r g i <<< "$g_i"
+            
+        done
+    done
+fi
 
 
 
