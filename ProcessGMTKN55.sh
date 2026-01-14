@@ -206,6 +206,10 @@ elif ((weight_Type == 2)) ; then
       "SCONF       17      4.60    10.0    4   15.8      0.403 "
       "UPU23       23      5.72    10.0    4   11.6      0.547 "
     )
+    echo "WARNING: WTMAD-4 weights from ALL-115 dataset selected. Is this intentional?  " >&2
+    echo "         D3-10 weights should be used as described in doi:10.1039/D5CP03741G  " >&2
+    echo "         Only use the alternate ALL-115 weights if you know what you're doing." >&2
+    echo "         Otherwise, select 'weight_Type=1' in the code header.                " >&2
 else
     echo "ERROR: weight_Type Not Supported. Exiting..." >&2
     exit 1
