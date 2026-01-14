@@ -71,6 +71,7 @@ print_wtmad3_summary=1
 print_wtmad15_summary=0
 print_wtmad4_summary=1
 print_wtmad4p_summary=0
+print_outlier_analysis=1
 print_report=1
 
 ## REFERENCE DATA TABLE
@@ -608,11 +609,12 @@ fi
 
 
 # Print Summary Tables
-printf "\n"
-printf "%s\n" "--------------------"
-printf "%s\n" "   SUMMARY TABLES   "
-printf "%s\n" "--------------------"
-
+if ((print_wtmad1_summary == 1 || print_wtmad2_summary == 1 || print_wtmad3_summary == 1 || print_wtmad15_summary == 1 || print_wtmad4_summary == 1 || print_wtmad4p_summary == 1)) ; then
+    printf "\n"
+    printf "%s\n" "--------------------"
+    printf "%s\n" "   SUMMARY TABLES   "
+    printf "%s\n" "--------------------"
+fi
 
 if ((print_wtmad1_summary == 1)) ; then
     printf "%-${cw}s " "WTMAD-1"
@@ -720,18 +722,29 @@ fi
 
 
 
+# Print Outlier Analysis
+if ((print_outlier_analysis == 1)) ; then
+    printf "\n"
+    printf "%s\n" "--------------------"
+    printf "%s\n" "  OUTLIER ANALYSIS  "
+    printf "%s\n" "--------------------"
+fi
+
+
+
+
 
 
 
 # Print the Partial Stats Full Report
-if (( print_report == 1 )) ; then
+if ((print_report == 1)) ; then
     printf "\n"
     printf "%s\n" "-------------------"
     printf "%s\n" "   PARTIAL STATS   "
     printf "%s\n" "-------------------"
-    if (( deltaEBarMean_Type == 1 )) ; then
+    if ((deltaEBarMean_Type == 1)) ; then
         printf "%s\n" "Note: DeltaEBar_Mean fixed to use the 'full subset' value."
-    elif (( deltaEBarMean_Type == 2 )) ; then
+    elif ((deltaEBarMean_Type == 2)) ; then
         printf "%s\n" "Note: DeltaEBar_Mean recalculated for each group."
     else
         echo "ERROR: DeltaEBar_Mean Type Not Supported. Exiting..." >&2
