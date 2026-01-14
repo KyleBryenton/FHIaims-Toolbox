@@ -230,6 +230,7 @@ declare -A systems
 declare -A deltEBs
 declare -A weights
 declare -A weights2
+declare -A meanMADs
 
 # Declare arrays for holding totals
 declare -a subsets_total
@@ -254,7 +255,7 @@ done
 # Loop through the top-level info array
 for info in "${GMTKN55_info[@]}"; do
   # Read input line
-  read subset system deltEB weight subcat weight2 <<< "$info"
+  read subset system deltEB weight subcat weight2 meanMAD<<< "$info"
   # Assign groups depending on subcat
   case $subcat in
     0) groups=(0 6) ;;
@@ -271,6 +272,7 @@ for info in "${GMTKN55_info[@]}"; do
     deltEBs["$g,${index[$g]}"]=$deltEB
     weights["$g,${index[$g]}"]=$weight
     weights2["$g,${index[$g]}"]=$weight2
+    meanMADs["$g,${index[$g]}"]=$meanMAD
     # Update totals
     (( subsets_total[$g]++ ))
     (( systems_total[$g]+=system ))
