@@ -422,6 +422,11 @@ done
 #exit 1
 
 # Calculate Errors
+#
+# Notes:
+# - j loops over functionals, specified in input arguments.
+# - g loops over GMTKN55 subcategories/groups, specified by group_names. length = 7
+# - i loops over GMTKN55 subsets, specified in GMTKN55_info. length = 55 
 
 # Initialize wtmad arrays for each group and functional
 declare -A wtmad1 wtmad2 wtmad3 wtmad15 wtmad4 wtmad4p
