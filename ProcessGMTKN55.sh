@@ -401,8 +401,7 @@ for g_i in "${!subsets[@]}"; do  # key is "g_i"
     done
 done
 
-
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## USEFUL FOR DEBUGGING
 #echo
 #printf "%-${cw}s %-${cw}s %-${cw}s | " "Subset" "N.Systems" "DeltaEBar"
@@ -420,6 +419,15 @@ done
 #    done
 #fi
 #exit 1
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
+
+
 
 # Calculate Errors
 #
@@ -539,8 +547,6 @@ fi
 
 
 
-
-
 # Calculate Outlier Analysis
 # Proposed by E R Johnson and K R Bryenton in XDMz paper to detect outliers based off the functionals used for WTMAD-4 weights.
 # Initialize wtmad arrays for each group and functional
@@ -628,7 +634,7 @@ fi
 
 
 
-# Print Output:
+# PRINT OUTPUT:
 
 # Print Header
 echo
@@ -834,6 +840,21 @@ if ((print_outlier_analysis == 1)) ; then
     printf "%s\n" "--------------------"
     printf "%s\n" "  OUTLIER ANALYSIS  "
     printf "%s\n" "--------------------"
+    
+    printf "%-${cw}s " "" "N<0.5" "N<1.0" "N>1.0" "N>1.5" "N>2.0" "N>3.0" "min" "min_syst" "max" "max_syst"
+    printf "\n"
+    for j in "${!args[@]}" ; do
+        inFile="${args[$j]}"
+        printf "%-${cw}s " "${inFile%.*}"
+        for (( k=0 ; k<7 ; k++ )) ; do
+            printf "%-${cw}d " "${outlier["$k,$j"]}"
+        done
+        printf "%-${cw}s " "${subsets["$index_GMTKN55,${outlier["7,$j"]}"]}"
+        printf "%-${cw}d " "${outlier["8,$j"]}"
+        printf "%-${cw}s " "${subsets["$index_GMTKN55,${outlier["9,$j"]}"]}"
+        printf "\n"
+    done
+    printf "\n"
 fi
 
 
