@@ -550,29 +550,29 @@ fi
 # Calculate Outlier Analysis
 # Proposed by E R Johnson and K R Bryenton in XDMz paper to detect outliers based off the functionals used for WTMAD-4 weights.
 # Initialize wtmad arrays for each group and functional
-declare -A outlier
+declare -A outlier1
 for j in "${!args[@]}"; do
     # Dimension 1 (will index with k) stores the following information:
     # k=0 : N<0.5 (Number of MADs <= 0.5 * meanMAD from the WTMAD4 functionals on that GMTKN55 subset 
-    outlier["0,$j"]=0
+    outlier1["0,$j"]=0
     # k=1 : N<1.0
-    outlier["1,$j"]=0
+    outlier1["1,$j"]=0
     # k=2 : N>1.0
-    outlier["2,$j"]=0
+    outlier1["2,$j"]=0
     # k=3 : N>1.5
-    outlier["3,$j"]=0
+    outlier1["3,$j"]=0
     # k=4 : N>2.0
-    outlier["4,$j"]=0
+    outlier1["4,$j"]=0
     # k=5 : N>3.0
-    outlier["5,$j"]=0
+    outlier1["5,$j"]=0
     # k=6 : min, calculated by mad_i/meanMAD_i, (Initialized to i=0 value)
-    outlier["6,$j"]=$(echo "${mad_array["$index_GMTKN55,0,$j"]} / ${meanMADs["$index_GMTKN55,0"]}" | bc -l)
+    outlier1["6,$j"]=$(echo "${mad_array["$index_GMTKN55,0,$j"]} / ${meanMADs["$index_GMTKN55,0"]}" | bc -l)
     # k=7 : index of min
-    outlier["7,$j"]=0
+    outlier1["7,$j"]=0
     # k=8 : max, calculated by mad_i/meanMAD_i, (Initialized to i=0 value)
-    outlier["8,$j"]=$(echo "${mad_array["$index_GMTKN55,0,$j"]} / ${meanMADs["$index_GMTKN55,0"]}" | bc -l)
+    outlier1["8,$j"]=$(echo "${mad_array["$index_GMTKN55,0,$j"]} / ${meanMADs["$index_GMTKN55,0"]}" | bc -l)
     # k=9 : index of max
-    outlier["9,$j"]=0
+    outlier1["9,$j"]=0
 done
 
 if ((print_outlier_analysis == 1)) ; then
@@ -588,44 +588,44 @@ if ((print_outlier_analysis == 1)) ; then
             
             # Check N<0.5
             if (( $(echo "$mad_ratio < 0.5" | bc -l) )) ; then
-                ((outlier["0,$j"]++))
+                ((outlier1["0,$j"]++))
             fi
             # Check N<1.0
             if (( $(echo "$mad_ratio <= 1.0" | bc -l) )) ; then
-                ((outlier["1,$j"]++))
+                ((outlier1["1,$j"]++))
             fi
             # Check N>1.0
             if (( $(echo "$mad_ratio > 1.0" | bc -l) )) ; then
-                ((outlier["2,$j"]++))
+                ((outlier1["2,$j"]++))
             fi
             # Check N>1.5
             if (( $(echo "$mad_ratio > 1.5" | bc -l) )) ; then
-                ((outlier["3,$j"]++))
+                ((outlier1["3,$j"]++))
             fi
             # Check N>2.0
             if (( $(echo "$mad_ratio > 2.0" | bc -l) )) ; then
-                ((outlier["4,$j"]++))
+                ((outlier1["4,$j"]++))
             fi
             # Check N>3.0
             if (( $(echo "$mad_ratio > 3.0" | bc -l) )) ; then
-                ((outlier["5,$j"]++))
+                ((outlier1["5,$j"]++))
             fi
             # Check for min
-            if (( $(echo "$mad_ratio < ${outlier["6,$j"]}" | bc -l) )) ; then
-                outlier["6,$j"]=$mad_ratio
-                outlier["7,$j"]=$i
+            if (( $(echo "$mad_ratio < ${outlier1["6,$j"]}" | bc -l) )) ; then
+                outlier1["6,$j"]=$mad_ratio
+                outlier1["7,$j"]=$i
             fi
             # Check for max
-            if (( $(echo "$mad_ratio > ${outlier["8,$j"]}" | bc -l) )) ; then
-                outlier["8,$j"]=$mad_ratio
-                outlier["9,$j"]=$i
+            if (( $(echo "$mad_ratio > ${outlier1["8,$j"]}" | bc -l) )) ; then
+                outlier1["8,$j"]=$mad_ratio
+                outlier1["9,$j"]=$i
             fi
 
             # DEBUGGING STATEMENT:
             # echo "fnJ   setI  myMAD    meanMAD mad_ratio"
             # echo "$j     $i     ${mad_array["$index_GMTKN55,$i,$j"]}    ${meanMADs["$index_GMTKN55,$i"]}    $mad_ratio"
             # for k in {0..9} ; do
-            #     echo "outlier[$k,$j] = ${outlier["$k,$j"]}"
+            #     echo "outlier1[$k,$j] = ${outlier1["$k,$j"]}"
             # done
         done
     done
@@ -852,12 +852,12 @@ if ((print_outlier_analysis == 1)) ; then
         inFile="${args[$j]}"
         printf "%-${cw}s " "${inFile%.*}"
         for (( k=0 ; k<6 ; k++ )) ; do
-            printf "%-${cw}d " "${outlier["$k,$j"]}"
+            printf "%-${cw}d " "${outlier1["$k,$j"]}"
         done
-        printf "%-${cw}.2f " "${outlier["6,$j"]}"
-        printf "%-${cw}s "   "${subsets["$index_GMTKN55,${outlier["7,$j"]}"]}"
-        printf "%-${cw}.2f " "${outlier["8,$j"]}"
-        printf "%-${cw}s "   "${subsets["$index_GMTKN55,${outlier["9,$j"]}"]}"
+        printf "%-${cw}.2f " "${outlier1["6,$j"]}"
+        printf "%-${cw}s "   "${subsets["$index_GMTKN55,${outlier1["7,$j"]}"]}"
+        printf "%-${cw}.2f " "${outlier1["8,$j"]}"
+        printf "%-${cw}s "   "${subsets["$index_GMTKN55,${outlier1["9,$j"]}"]}"
         printf "\n"
     done
     printf "\n"
