@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ProcessGMTKN55.sh
-# Kyle Bryenton - 2026-01-14
+# Kyle Bryenton - 2026-01-26
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
@@ -40,7 +40,7 @@ print_progress=1
  #      for res in *.results ; do sed -i '/^## data dir:/!{/MAE       /!d}' res ; done
  # 1 = Data input type is in eval_driver.m format, merged to contain all 55 benchmarks.
  # 2 = Data input type is scraped data, alternating rows between `## data dir: <subset>` and `MAD <value>`
-dataInput_Type=2
+dataInput_Type=1
 
 ## FLAGS for deltaEBarMean control. Suggested = 1
  # For Groups "basic+ssmall, iso.+large, etc..." select which DeltaEBar_Mean to use:
@@ -95,7 +95,7 @@ if ((weight_Type == 1)) ; then
       "ALK8         8     62.60     1.0    0    1.30     4.88  "
       "ALKBDE10    10    100.69     0.1    0    1.06     6.03  "
       "BH76RC      30     21.39     1.0    0    2.55     2.49  "
-      "DC13        13     54.98     1.0    0    0.78     8.16  "
+      "DC13        13     54.98     1.0    0    0.780    8.16  "
       "DIPCS10     10    654.26     0.1    0    1.65     3.86  "
       "FH51        51     31.01     1.0    0    2.39     2.66  "
       "G21EA       25     33.62     1.0    0    2.15     2.97  "
@@ -550,7 +550,7 @@ fi
 # Calculate Outlier Analysis
 # Proposed by E R Johnson and K R Bryenton in XDMz paper to detect outliers based off the functionals used for WTMAD-4 weights.
 # Initialize wtmad arrays for each group and functional
-declare -A outliers
+declare -A outlier
 for j in "${!args[@]}"; do
     # Dimension 1 (will index with k) stores the following information:
     # k=0 : N<0.5 (Number of MADs <= 0.5 * meanMAD from the WTMAD4 functionals on that GMTKN55 subset 
@@ -566,50 +566,48 @@ for j in "${!args[@]}"; do
     # k=5 : N>3.0
     outlier["5,$j"]=0
     # k=6 : min, calculated by mad_i/meanMAD_i, (Initialized to i=0 value)
-    outlier["6,$j"]=mad_array["$index_GMTKN55,0,$j"]
+    outlier["6,$j"]=$(echo "${mad_array["$index_GMTKN55,0,$j"]} / ${meanMADs["$index_GMTKN55,0"]}" | bc -l)
     # k=7 : index of min
     outlier["7,$j"]=0
     # k=8 : max, calculated by mad_i/meanMAD_i, (Initialized to i=0 value)
-    outlier["8,$j"]=mad_array["$index_GMTKN55,0,$j"]
+    outlier["8,$j"]=$(echo "${mad_array["$index_GMTKN55,0,$j"]} / ${meanMADs["$index_GMTKN55,0"]}" | bc -l)
     # k=9 : index of max
     outlier["9,$j"]=0
 done
 
-if ((print_outlier_anlysis == 1)) ; then
+if ((print_outlier_analysis == 1)) ; then
     if ((print_progress == 1)) ; then echo "... OUTLIER ANALYSIS" ; fi
     for j in "${!args[@]}" ; do
         for (( i=0 ; i<subsets_total[$index_GMTKN55] ; i++ )) ; do
-            #The MAD value for functional $j, subset $i, is:
-            mad_value=${mad_array["$index_GMTKN55,$i,$j"]}
             
             #The MAD value to meanMAD ratio for subset $i is:           
-            mad_ratio=$(echo "${mad_array["$index_GMTKN55,$i,$j"]} / ${meanMADs[$i]}" | bc -l)
+            mad_ratio=$(echo "${mad_array["$index_GMTKN55,$i,$j"]} / ${meanMADs["$index_GMTKN55,$i"]}" | bc -l)
             
             # Now check mad_ratio for min, max, N<, and N> values.
             # This could be made more efficient by not using bc and using intelligent searching but lets keep it simple
             
             # Check N<0.5
-            if (( $(echo "$mad_ratio < 0.5*${madMADs[$i]}" | bc -l) )) ; then
+            if (( $(echo "$mad_ratio < 0.5" | bc -l) )) ; then
                 ((outlier["0,$j"]++))
             fi
             # Check N<1.0
-            if (( $(echo "$mad_ratio < 1.0*${madMADs[$i]}" | bc -l) )) ; then
+            if (( $(echo "$mad_ratio <= 1.0" | bc -l) )) ; then
                 ((outlier["1,$j"]++))
             fi
             # Check N>1.0
-            if (( $(echo "$mad_ratio > 1.0*${madMADs[$i]}" | bc -l) )) ; then
+            if (( $(echo "$mad_ratio > 1.0" | bc -l) )) ; then
                 ((outlier["2,$j"]++))
             fi
             # Check N>1.5
-            if (( $(echo "$mad_ratio > 1.5*${madMADs[$i]}" | bc -l) )) ; then
+            if (( $(echo "$mad_ratio > 1.5" | bc -l) )) ; then
                 ((outlier["3,$j"]++))
             fi
             # Check N>2.0
-            if (( $(echo "$mad_ratio > 2.0*${madMADs[$i]}" | bc -l) )) ; then
+            if (( $(echo "$mad_ratio > 2.0" | bc -l) )) ; then
                 ((outlier["4,$j"]++))
             fi
             # Check N>3.0
-            if (( $(echo "$mad_ratio > 3.0*${madMADs[$i]}" | bc -l) )) ; then
+            if (( $(echo "$mad_ratio > 3.0" | bc -l) )) ; then
                 ((outlier["5,$j"]++))
             fi
             # Check for min
@@ -622,6 +620,13 @@ if ((print_outlier_anlysis == 1)) ; then
                 outlier["8,$j"]=$mad_ratio
                 outlier["9,$j"]=$i
             fi
+
+            # DEBUGGING STATEMENT:
+            # echo "fnJ   setI  myMAD    meanMAD mad_ratio"
+            # echo "$j     $i     ${mad_array["$index_GMTKN55,$i,$j"]}    ${meanMADs["$index_GMTKN55,$i"]}    $mad_ratio"
+            # for k in {0..9} ; do
+            #     echo "outlier[$k,$j] = ${outlier["$k,$j"]}"
+            # done
         done
     done
 fi
@@ -841,17 +846,18 @@ if ((print_outlier_analysis == 1)) ; then
     printf "%s\n" "  OUTLIER ANALYSIS  "
     printf "%s\n" "--------------------"
     
-    printf "%-${cw}s " "" "N<0.5" "N<1.0" "N>1.0" "N>1.5" "N>2.0" "N>3.0" "min" "min_syst" "max" "max_syst"
+    printf "%-${cw}s " "" "N<0.5" "N<=1.0" "N>1.0" "N>1.5" "N>2.0" "N>3.0" "min" "min_syst" "max" "max_syst"
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
         printf "%-${cw}s " "${inFile%.*}"
-        for (( k=0 ; k<7 ; k++ )) ; do
+        for (( k=0 ; k<6 ; k++ )) ; do
             printf "%-${cw}d " "${outlier["$k,$j"]}"
         done
-        printf "%-${cw}s " "${subsets["$index_GMTKN55,${outlier["7,$j"]}"]}"
-        printf "%-${cw}d " "${outlier["8,$j"]}"
-        printf "%-${cw}s " "${subsets["$index_GMTKN55,${outlier["9,$j"]}"]}"
+        printf "%-${cw}.2f " "${outlier["6,$j"]}"
+        printf "%-${cw}s "   "${subsets["$index_GMTKN55,${outlier["7,$j"]}"]}"
+        printf "%-${cw}.2f " "${outlier["8,$j"]}"
+        printf "%-${cw}s "   "${subsets["$index_GMTKN55,${outlier["9,$j"]}"]}"
         printf "\n"
     done
     printf "\n"
