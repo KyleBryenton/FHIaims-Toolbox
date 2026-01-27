@@ -951,12 +951,12 @@ if ((print_outlier_analysis == 1)) ; then
     printf "\n"
     # Print outliers determined via difference. 
     printf "%s\n" "** Difference Outliers: N=mad_i-meanMAD_i (in kcal/mol)"
-    printf "%-${cw}s " "" "N<-5.0" "N<-4.0" "N<-3.0" "N<-2.0" "N<-1.0" "N<=0.0" "N>1.0" "N>2.0" "N>3.0" "N>4.0" "N>5.0" "min" "min_syst" "max" "max_syst"
+    printf "%-${cw}s " "" "N<-5.0" "N<-4.0" "N<-3.0" "N<-2.0" "N<-1.0" "N<=0.0" "N>0.0" "N>1.0" "N>2.0" "N>3.0" "N>4.0" "N>5.0" "min" "min_syst" "max" "max_syst"
     printf "\n"
     for j in "${!args[@]}" ; do
         inFile="${args[$j]}"
         printf "%-${cw}s " "${inFile%.*}"
-        for (( k=0 ; k<11 ; k++ )) ; do
+        for (( k=0 ; k<12 ; k++ )) ; do
             printf "%-${cw}d " "${outlier2["$k,$j"]}"
         done
         printf "%-${cw}.2f " "${outlier2["12,$j"]}"
