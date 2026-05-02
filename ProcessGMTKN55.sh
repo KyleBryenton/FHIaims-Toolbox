@@ -1,14 +1,23 @@
 #!/bin/bash
 
-# ProcessGMTKN55.sh
-# Kyle Bryenton - 2026-01-26
+version_stamp="1.02"
+
+# Authors: Kyle R Bryenton, kyle.bryenton@gmail.com
+# Name:    ProcessGMTKN55.sh
+# Version: 1.02
+# ChangeLog:
+#     v1.00 - 2025-11-18 - Initial implementation. Used for WTMAD-4 paper
+#     v1.01 - 2026-01-26 - Outlier analysis finished. Used for Consistent GMTKN55 & XDM(Z) paper
+#     v1.02 - 2026-04-27 - Loosened input requirements. Try to auto-detect dataInput_Type. For Local Hybrid paper.
+#
+# Purpose:
 #    This script is run by supplying a list of paths to *.results files to process
 #    The .results files are the output of eval_driver.m
 #    Each .results file should contain the error metrics for each of the 55 subset for one basis/functional combination
 #    The order you want the results in is located at the top of the file
 #    Each .results file will print either the MAE or ME as a column in the output
-#    The script formally works with any extension. Don't include non-extension periods in your filenames. 
-#set -euxo pipefail
+#    The script formally works with any extension. Don't include non-extension periods in your filenames.
+
 
 # Check for input files
 if [ $# == 0 ]; then
@@ -221,6 +230,18 @@ group_names=( "basicsmall" "isolarge" "barriers" "intermolNCI" "intramolNCI" "al
 
 ### END USER SETTABLE AREA ###
 
+# Print Header:
+script_name=${0##*/}
+top_dir_name=${script_name%.sh}
+# Write everything both to a file "ProcessGMTKN55.dat" and to the terminal
+exec > >(tee -a "${top_dir_name}.dat") 2>&1
+# Print header
+echo
+echo "-----------------------------------------------"
+echo "Starting $script_name Version $version_stamp"
+echo "$(pwd)"
+echo "$(TZ=America/Halifax date +"%Y-%m-%d %H:%M:%S")"
+echo "-----------------------------------------------"
 
 
 # Import Data
@@ -351,25 +372,47 @@ for inFile in "$@" ; do
     fi
 done
 
+
 # Fetch the Mean Absolute Errors (MAE or MAD) for each input
 if ((print_progress == 1)) ; then echo "Calculating:"  ; fi
-if ((print_progress == 1)) ; then echo "... MAD Array" ; fi
-declare -A mad_array
-for g_i in "${!subsets[@]}"; do  # key is "g_i"
-    IFS=',' read -r g i <<< "$g_i"
-    subset="${subsets["$g,$i"]}"
-    n_syst="${systems["$g,$i"]}"
-    if ((dataInput_Type == 1)) ; then   # eval_driver.m prints 9 extra rows / subset; - 1 for din. Thus = n_syst + 8
-        n_line=$(( n_syst + 8 ))
-    elif ((dataInput_Type == 2)) ; then # Used for scraped data, only need 1 row after subset detection.
-        n_line=1
+for attempt in 1 2 ; do
+    failed=0
+    declare -A mad_array
+    if ((print_progress == 1)) ; then echo "... MAD Array" ; fi
+    for g_i in "${!subsets[@]}"; do  # key is "g_i"
+        IFS=',' read -r g i <<< "$g_i"
+        subset="${subsets["$g,$i"]}"
+        n_syst="${systems["$g,$i"]}"
+        if ((dataInput_Type == 1)) ; then   # eval_driver.m prints 9 extra rows / subset; - 1 for din. Thus = n_syst + 8
+            n_line=$(( n_syst + 8 ))
+        elif ((dataInput_Type == 2)) ; then # Used for scraped data, only need 1 row after subset detection.
+            n_line=1
+        else
+            echo "ERROR: dataInput_Type Type Not Supported. Exiting..." >&2
+            exit 1
+        fi
+        for j in "${!args[@]}"; do
+            inFile="${args[$j]}"
+            mad_value=$(grep -i -A "$n_line" "^#.*${subset}[[:space:]]*$" "$inFile" | tail -n +2 | grep "MAE\|MAD" | awk '{print $NF}')
+            if [[ $(wc -l <<< "$mad_value") -ne 1 ]] || ! [[ "$mad_value" =~ ^-?([0-9]+(\.[0-9]*)?|\.[0-9]+)$ ]] || awk '{exit ($1 <= 0 ? 0 : 1)}' <<< "$mad_value" ; then
+                failed=1
+                break 2   # break BOTH loops immediately
+            fi
+            mad_array["$g,$i,$j"]="$mad_value"
+        done
+    done
+    
+    # If it didn't fail, break and don't try to fix.
+    if (( failed == 0 )) ; then break ; fi
+
+    # If it failed on first attempt, change dataInput_Type and retry
+    if (( attempt == 1 )); then
+        # Data input type failed, try switching before continuing. Don't try checking again.
+        echo "WARNING: Your entered dataInput_Type = $dataInput_Type did not pass initial checks."
+        if (( dataInput_Type == 1 )) ; then dataInput_Type=2 ; else dataInput_Type=1 ; fi
+        echo "         Switching automatically to dataInput_Type = $dataInput_Type and trying again."
     else
-        echo "ERROR: dataInput_Type Type Not Supported. Exiting..." >&2
-        exit 1
-    fi
-    for j in "${!args[@]}"; do
-        inFile="${args[$j]}"
-        mad_value=$(grep -i -A "$n_line" "^## data dir:.*${subset}[[:space:]]*$" "$inFile" | tail -n +2 | grep "MAE\|MAD" | awk '{print $NF}')
+        echo "ERROR: Both dataInput_Type options failed." >&2
         if [[ $(wc -l <<< "$mad_value") -ne 1 ]] ; then
             echo "ERROR: Expected exactly 1 MAD value, got $(wc -l <<< "$mad_value")" >&2
             echo "   File: $inFile | Subset: $subset"                                 >&2
@@ -377,7 +420,6 @@ for g_i in "${!subsets[@]}"; do  # key is "g_i"
             echo "   Check your 'dataInput_Type' settable variable."                  >&2
             echo "Raw values found:"                                                  >&2
             echo "$mad_value"                                                         >&2
-            exit 1
         fi
         if ! [[ "$mad_value" =~ ^-?([0-9]+(\.[0-9]*)?|\.[0-9]+)$ ]] ; then
             echo "ERROR: MAD value is non-numerical"                                  >&2
@@ -386,7 +428,6 @@ for g_i in "${!subsets[@]}"; do  # key is "g_i"
             echo "   Check your 'dataInput_Type' settable variable."                  >&2
             echo "Raw values found:"                                                  >&2
             echo "$mad_value"                                                         >&2
-            exit 1
         fi
         if awk '{exit ($1 <= 0 ? 0 : 1)}' <<< "$mad_value" ; then
             echo "ERROR: MAD value is equal to or less than zero"                     >&2
@@ -395,10 +436,9 @@ for g_i in "${!subsets[@]}"; do  # key is "g_i"
             echo "   Check your 'dataInput_Type' settable variable."                  >&2
             echo "Raw values found:"                                                  >&2
             echo "$mad_value"                                                         >&2
-            exit 1
         fi
-        mad_array["$g,$i,$j"]="$mad_value"
-    done
+        exit 1
+    fi
 done
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

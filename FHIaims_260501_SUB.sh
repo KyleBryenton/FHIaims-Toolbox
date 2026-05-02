@@ -1,20 +1,25 @@
 #!/bin/bash
 
-# FHIaims_240507_Stable_SUB.sh
-# Kyle Bryenton - 2024-09-15
-#
-# A slurm submission script with wildcard support for FHIaims_240507_Stable
+# FHIaims_260501_SUB.sh
+# Kyle Bryenton - 2026-05-01
 
+# FHIaims version 260501 is the public release of XDM(Z) 
 
-# Choose if you want it to read the input, or just use some standard
+# Choose if you want it to read the input, or use the defaults below
 #read -p "Specify number of nodes [1-5]" -a node
 #read -p "Specify walltime: [hh:mm:ss]" -a wall
 #read -p "Specify number of processors per node: [n]" -a nprocs
 #read -p "Specify amount of total memory: [nM]" -a pmem
-node="1"
-wall="3:00:00"
-nprocs="1"
-pmem="4000M"
+
+# Comment out if you want to read from the user above.
+node="1"        # Generally keep as low as possible. Ideally 1
+wall="3:00:00"  # Generally always use 3:00:00 or 24:00:00 if you can.
+nprocs="4"      # Use fractions of 40 per node on Siku, or 64 per node on Argo
+pmem="3900M"    # Limits of approximately 4600M/cpu on Siku, or 3900M/cpu on Argo
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 # Get current directory and store it.
 WD=$(pwd)
@@ -47,7 +52,7 @@ export MKL_NUM_THREADS=1
 export MKL_DYNAMIC=FALSE
 ulimit -s unlimited
 
-mpirun ~/projects/def-ejohnson/FHIaims/FHIaims_240507_Stable/build/aims.240507.scalapack.mpi.x </dev/null > ${name%/}.out
+mpirun ~/projects/def-ejohnson/FHIaims/FHIaims_260501/build/aims.260501.scalapack.mpi.x </dev/null > ${name%/}.out
 EOF
     sbatch ${name%/}.slm
     cd $myDIR #Navigates back to directory the script was started from
