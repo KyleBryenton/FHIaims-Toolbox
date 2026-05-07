@@ -47,8 +47,13 @@ for dir in */ ; do
 	fi
     else 
         if (( extra_checks == 1 )) ; then
-	    inp=(*.inp)
-	    out=${inp%.inp}.out #Assumes the .out is the same basename as the .inp
+	    inp=(*.in)
+	    inp=${inp[0]}
+	    out=${inp%.in}.out #Assumes the .out is the same basename as the .in
+	    # Backup in case it isn't, try your best, don't get a slurm file.
+	    if [[ ! -f "$out" ]] ; then
+                out=$(find . -maxdepth 1 -name "*.out" ! -name "slurm*" | head -n 1)
+            fi
 	    ok=1
             # Check if opt was called
 	    if grep -iqE " opt" "$inp" ; then
@@ -58,7 +63,8 @@ for dir in */ ; do
 		fi
 	    fi
 	    # Check if freq was called
-	    if grep -iqE " freq" "$inp" ; then
+	    is_there_atom_2=$(grep -A6 "Standard orientation:" control.out | head -n 7 | tail -n 1 | awk '{print $1}')
+	    if grep -iqE " freq" "$inp" && [[ "$is_there_atom_2" == "2" ]] ; then
 	        freq=$(grep "Frequencies --" control.out | head -1 | awk '{print $(NF-2)}')
                 if [[ -z "$freq" ]] ; then
                     out_str+=" | No freqs detected"
