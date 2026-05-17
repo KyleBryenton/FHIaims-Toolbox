@@ -2,32 +2,45 @@
 
 version_stamp=2.00
 
+# Kyle R Bryenton 2026-05-16 <kyle.bryenton@gmail.com>
 # ProcessFitDriver.sh
-# Kyle Bryenton - 2026-05-16
-
-
-# Kyle R Bryenton 2026-05-16
-# ProcessFitDriver.sh
+# Available at: https://github.com/KyleBryenton/FHIaims-Toolbox
 # Version: 2.00
 # ChangeLog:
 #     v1.00 - 2025-07-31 - Initial implementation, for use with fit_driver from 2019
 #     v2.00 - 2026-05-16 - Updated version that works with Z damping. Works with most up-to-date version of fit_driver
 #                          Total rewrite from previous version. Some features were discontinued such as output to .params
+# Run using:
+#     ./ProcessFitDriver.sh <list of paths to fit_driver.m outputs>
+#
+# Purpose:
+#     This script will combine outputs from 50_fit/fit_driver.m from https://github.com/aoterodelaroza/refdata
+#     It summarizes them into a convenient table with relevant error metrics and damping parameters.
+#     Note that a1<0 and a2<0 are rejected and a warning will be generated to the user However, if BJ0 
+#     and BJa20 results are also supplied as input files, it will automatically replace the result with
+#     negative a1 or a2 values with the lowest RMSP version that satisfies a1>=0 and a2>=0. 
+#     Matching between functionals is done through columns generated from the path in the "## FIT for:" line.
+#     Note that BJ damping and Z damping cannot be processed at the same time.
 
 
-# How many columns to keep:
-n_cols=2
+# How many columns to generate based on the directory path from the "## FIT for:" line:
+n_cols=3
 
 # Print one output per input fit-driver.m output. (True = 1, False = 0)
 partial_print=0
 
-# How many columns to keep:
-n_cols=2
 
-# We will keep both Col1 Col2 Col3 and their concatination "Cols"
-# This will let us search BJ vs BJ0 damping based on Cols, rather than matching Col1 Col2 and Col3 separately.
+
+# End of user setable area
+
+# Check for input files
+if [ $# == 0 ]; then
+    echo "ERROR: No *.results files detected. Exiting."                >&2
+    echo "USAGE: $0 kb49_energy_bj.results kb49_energy_bj0.results kb49_energy_bja20.results ..."    >&2
+    exit 1
+fi
+
 declare -a n_entries lens
-# declare -A Col1 Col2 Col3
 declare -A Cols a1 a2 z_damp nSet MAD MaxAD MaxAD_Set RMS MAPD MaxAPD MaxAPD_Set RMSP
 
 # Detects damping type by grepping the fit_driver.m outputs.
@@ -54,10 +67,6 @@ for res in "$@" ; do
             if (i < NF) printf "/" 
         } printf "\n"
     }'))
-   # myCol1=(       $(grep "## FIT for:"    "$res" | awk -F "/" '{print $(NF-2)}'))
-   # myCol2=(       $(grep "## FIT for:"    "$res" | awk -F "/" '{print $(NF-1)}'))
-   # myCol3=(       $(grep "## FIT for:"    "$res" | awk -F "/" '{print $NF}'))
-   # myCols=(       $(grep "## FIT for:"    "$res" | awk -F "/" '{printf "%s/%s/%s\n", $(NF-2), $(NF-1), $NF}'))
     mynSet=(       $(grep "Dataset size =" "$res" | awk '{print $NF}'))
     myMAD=(        $(grep "MAD    ="       "$res" | awk '{print $NF}'))
     myMaxAD=(      $(grep "MaxAD  ="       "$res" | awk '{print $(NF-1)}'))
@@ -126,7 +135,8 @@ for res in "$@" ; do
             z_damp["$index,$i"]="${myz_damp[$i]}"
         fi
     done
-    
+   
+    # If user requested printing partial output, do so.
     if (( partial_print == 1 )) ; then
 
         # Get max length of first column
@@ -171,6 +181,7 @@ done
 
 
 # Join all data into a single output
+# I'm lazy, so lets just make a temp file to work with and delete it later.
 script_name=${0##*/}
 script_name=${script_name%.sh}
 if (( dampType==1 )) ; then
@@ -191,14 +202,14 @@ if (( dampType==1 )) ; then
                     "${a1["$index,$i"]}" "${a2["$index,$i"]}" >> "$script_name.temp1"
             else
                 # If either a1<0 or a2<0, then this isn't a valid match, so search for one and print it
-                # Looping over all Cols isn't very efficient, but this should be a rare occurance and shouldn't bottleneck
-                # Would be faster to use a lookup array.
+                # Looping over all Cols isn't very efficient, but this should be a rare occurance and isn't bottleneck
+                # Would be faster to use a lookup array, if ever needed.
                 Cols_temp=${Cols["$index,$i"]}
                 for (( index2=0 ; index2<$# ; index2++ )) ; do
                     for (( i2=0 ; i2<${n_entries[$index2]} ; i2++ )) ; do
                         if [[ "$Cols_temp" == "${Cols["$index2,$i2"]}" ]] ; then
                             if (( $(echo "${a1["$index2,$i2"]} >= 0" | bc ) && $(echo "${a2["$index2,$i2"]} >= 0" | bc ) )) ; then
-                                # A match was found, print it, set the match flag, then go to next i in n_entries[index]
+                                # A match was found, print it, then continue to next i in n_entries[index]
                                 printf "%*s %8d %8.3f %8.3f %8.3f %8.3f %8.3f %8.3f %14.8f %14.8f\n" \
                                     "$max_len" "${Cols["$index2,$i2"]}" \
                                     "${nSet["$index2,$i2"]}" "${MAD["$index2,$i2"]}" "${MaxAD["$index2,$i2"]}" "${RMS["$index2,$i2"]}" \
@@ -209,7 +220,7 @@ if (( dampType==1 )) ; then
                         fi
                     done
                 done
-                # No match was found, just print the negative version I suppose.
+                # No match was found, just print the negative version I suppose and warn user.
                 echo "WARNING: No version of '$Cols_temp' found with both a1,a2 >= 0" >&2
                 printf "%*s %8d %8.3f %8.3f %8.3f %8.3f %8.3f %8.3f %14.8f %14.8f\n" \
                     "$max_len" "${Cols["$index,$i"]}" \
@@ -220,7 +231,7 @@ if (( dampType==1 )) ; then
         done
     done
 elif (( dampType==2 )) ; then
-    # Z damping is the easy one. Just shove them all together.
+    # Z damping is the easy one. Just shove all tables together.
     index=0
     # Print Header
     printf "%*s %8s %8s %8s %8s %8s %8s %8s %14s\n" \
@@ -299,7 +310,7 @@ BEGIN {
     for ( i=n+2 ; i <= n+7 ; i++ )
         printf "%8.4f  ", $i
 
-    # If BJ damping, print BJ elements
+    # If BJ damping, print BJ elements, else print Z element
     if ( d == 1 ) {
         printf "%14.8f  %14.8f  \n", $(n+8), $(n+9)
     } else {
@@ -317,8 +328,9 @@ echo "-----------------------------------------------"
 
 
 # Re-sort just in case, and remove temp files. Output to standard output.
+# Sort the first 7 columns, surely that will get all the header columns and doesn't matter beyond there.
 head -n 1 "$script_name.temp3" 
-tail -n +2 "$script_name.temp3" | sort 
+tail -n +2 "$script_name.temp3" | sort -k1,1 -k2,2 -k3,3 -k4,4 -k5,5 -k6,6 -k7,7
 
 # Clean up temp files
 rm "$script_name.temp1" "$script_name.temp2" "$script_name.temp3"
