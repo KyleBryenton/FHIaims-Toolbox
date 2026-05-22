@@ -96,9 +96,9 @@ print_report=1
  #     Column 7: Mean MAD calculated for that benchmark across the considered functionals [Used for outlier analysis]
  # To obtain ref energies from your .din, use the following one-liner:
  #     cat *.din | awk '/^0$/ { getline; print }' | awk '{sum+=sqrt($1*$1); n++} END {if(n>0) printf "%.2f\n", sum/n}'     
-weight_Type=1 #1 = D3-10, 2 = ALL-115
+weight_Type=1 #1 = 10-DFA, 2 = ALL-115
 if ((weight_Type == 1)) ; then
-    ### WTMAD-4 Weights determined using D3-10 Dataset
+    ### WTMAD-4 Weights determined using 10-DFA Dataset
     GMTKN55_info=(
       "AL2X6        6     35.88     1.0    0    3.27     1.94  "
       "ALK8         8     62.60     1.0    0    1.30     4.88  "
@@ -216,7 +216,7 @@ elif ((weight_Type == 2)) ; then
       "UPU23       23      5.72    10.0    4   11.6      0.547 "
     )
     echo "WARNING: WTMAD-4 weights from ALL-115 dataset selected. Is this intentional?  " >&2
-    echo "         D3-10 weights should be used as described in doi:10.1039/D5CP03741G  " >&2
+    echo "         10-DFA weights should be used as described in doi:10.1039/D5CP03741G  " >&2
     echo "         Only use the alternate ALL-115 weights if you know what you're doing." >&2
     echo "         Otherwise, select 'weight_Type=1' in the code header.                " >&2
 else
