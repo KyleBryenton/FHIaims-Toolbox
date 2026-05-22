@@ -1,15 +1,17 @@
 #!/bin/bash
 
-version_stamp=2.00
+version_stamp=2.01
 
-# Kyle R Bryenton 2026-05-16 <kyle.bryenton@gmail.com>
+# Kyle R Bryenton 2026-05-21 <kyle.bryenton@gmail.com>
 # ProcessFitDriver.sh
 # Available at: https://github.com/KyleBryenton/FHIaims-Toolbox
-# Version: 2.00
+# Version: 2.01
 # ChangeLog:
 #     v1.00 - 2025-07-31 - Initial implementation, for use with fit_driver from 2019
 #     v2.00 - 2026-05-16 - Updated version that works with Z damping. Works with most up-to-date version of fit_driver
 #                          Total rewrite from previous version. Some features were discontinued such as output to .params
+#     v2.01 - 2026-05-21 - Changed the final output of error stats from 8.4f to 8.3f to cut trailing zeros. 
+#     
 # Run using:
 #     ./ProcessFitDriver.sh <list of paths to fit_driver.m outputs>
 #
@@ -24,7 +26,7 @@ version_stamp=2.00
 
 
 # How many columns to generate based on the directory path from the "## FIT for:" line:
-n_cols=3
+n_cols=4
 
 # Print one output per input fit-driver.m output. (True = 1, False = 0)
 partial_print=0
@@ -36,7 +38,7 @@ partial_print=0
 # Check for input files
 if [ $# == 0 ]; then
     echo "ERROR: No *.results files detected. Exiting."                >&2
-    echo "USAGE: $0 kb49_energy_bj.results kb49_energy_bj0.results kb49_energy_bja20.results ..."    >&2
+    echo "USAGE: $0 kb49_energy_bj.results kb49_energy_bj0.results kb49_energy_bja20.results ...)"    >&2
     exit 1
 fi
 
@@ -308,7 +310,7 @@ BEGIN {
 
     # Print the 6 error columns
     for ( i=n+2 ; i <= n+7 ; i++ )
-        printf "%8.4f  ", $i
+        printf "%8.3f  ", $i
 
     # If BJ damping, print BJ elements, else print Z element
     if ( d == 1 ) {
