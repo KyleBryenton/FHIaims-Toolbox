@@ -259,7 +259,7 @@ else
     fi
     # Loop through all basis types
     for basis in "$@" ; do
-        basis=$(echo "$basis" | tr '[:upp  er:]' '[:lower:]')
+        basis=$(echo "$basis" | tr '[:upper:]' '[:lower:]')
         case "$basis" in
             "li"|"light")
                 if [[ -d "$Li_dir" && "$Li_dir" != "$basis_dir" ]] ; then 
