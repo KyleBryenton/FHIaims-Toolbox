@@ -214,8 +214,8 @@ In_flag=false   #Flag to scan for "intermediate/" directories
 Ti_flag=false   #Flag to scan for "tight/"        directories
 Re_flag=false   #Flag to scan for "really_tight/" directories
 LD_flag=false   #Flag to scan for "lightdense/"   directories
-DNLD_flag=false #Flag to scan for "defaults_next/lightdense/" directories
-LDr_flag=false  #Flag to scan for "lightdenser/"  directories
+DNLD_flag=false #Flag to scan for "defaults_next/dense/lightdense/" directories
+LDr_flag=false  #Flag to scan for "defaults_next/dense/lightdenser/"  directories
 ID_flag=false   #Flag to scan for "intdense/"     directories
 RD_flag=false   #Flag to scan for "tightdense/"   directories
 Aug2_flag=false #Flag to scan for "Tier2_aug2/"   directories
@@ -236,7 +236,7 @@ if [ $# == 0 ]; then
     echo "                       - really_tight   re                         " >&2
     echo "                       - lightdense     ld                         " >&2
     echo "                       - defaults_next_lightdense  dnld            " >&2
-    echo "                       - defaults_next_lightdenser ldr             " >&2
+    echo "                       - defaults_next_lightdenser dnldr ldr       " >&2
     echo "                       - intdense       id  # Not yet in FHI-aims  " >&2
     echo "                       - tightdense     td  # Not yet in FHI-aims  " >&2
     echo "                       - Tier2_aug2     aug2                       " >&2
@@ -303,7 +303,7 @@ else
                 ;;
 	    "dnld"|"defaults_next_lightdense")
                 if [[ -d "$DNLD_dir" && "$DNLD_dir" != "$basis_dir" ]] ;
-                    then LD_flag=true
+                    then DNLD_flag=true
                     echo "Detected Basis: defaults_next_lightdense @ $DNLD_dir"
                 else
                     echo "WARNING: '$DNLD_dir' basis directory not detected --- Skipping..."
@@ -381,7 +381,7 @@ else
                     echo "WARNING: '$LD_dir' basis directory not detected --- Skipping..."
                 fi
                 if [[ -d "$DNLD_dir" && "$DNLD_dir" != "$basis_dir" ]] ;
-                    then LD_flag=true
+                    then DNLD_flag=true
                     echo "Detected Basis: defaults_next_lightdense @ $DNLD_dir"
                 else
                     echo "WARNING: '$DNLD_dir' basis directory not detected --- Skipping..."
