@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # BasisConstructor.sh
-# Kyle Bryenton - 2025-01-25
+# Kyle Bryenton - 2026-11-06
 # 
 #       Setup: Set the "basis_dir" in the header.
 # Description: This script finds FHI-aims geometry.in files and sets the basis in their corresponding control.in files based on the input arguments
@@ -21,16 +21,17 @@
 #             - Finds all geometry.in in all subdirectories starting from the pwd
 #             - Sets their basis to "lightdense" defaults
 # 
-# Supported Basis Sets:   Basis          Alias
-#                       - light          li
-#                       - intermediate   in
-#                       - tight          ti
-#                       - really_tight   re
-#                       - lightdense     ld
-#                       - lightdenser    ldr
-#                       - intdense       id  # Not yet in FHI-aims
-#                       - tightdense     td  # Not yet in FHI-aims
-#                       - Tier2_aug2     aug2
+# Supported Basis Sets:   Basis                     Alias
+#                       - light                     li
+#                       - intermediate              in
+#                       - tight                     ti
+#                       - really_tight              re
+#                       - lightdense                ld
+#                       - defaults_next/lightdense  dnld
+#                       - defaults_next/lightdenser ldr dnldr
+#                       - intdense                  id  # Not yet in FHI-aims
+#                       - tightdense                td  # Not yet in FHI-aims
+#                       - Tier2_aug2                aug2
 #
 # Notes: - Using <basis> = "all" will attempt to set all of the above
 #        - '*_then_lightdense', '*_then_tight', etc... will be included if 'lightdense', 'tight', etc.. are selected.
@@ -59,6 +60,7 @@ In_dir="${basis_dir}defaults_2020/intermediate"
 Ti_dir="${basis_dir}defaults_2020/tight"
 Re_dir="${basis_dir}defaults_2020/really_tight"
 LD_dir="${basis_dir}defaults_2020/lightdense"
+DNLD_dir="${basis_dir}defaults_next/lightdenser"
 LDr_dir="${basis_dir}defaults_next/dense/lightdenser"
 Aug2_dir="${basis_dir}non-standard/Tier2_aug2"
 Cu_dir="${basis_dir}non-standard/tight_and_aug2"
@@ -212,6 +214,7 @@ In_flag=false   #Flag to scan for "intermediate/" directories
 Ti_flag=false   #Flag to scan for "tight/"        directories
 Re_flag=false   #Flag to scan for "really_tight/" directories
 LD_flag=false   #Flag to scan for "lightdense/"   directories
+DNLD_flag=false #Flag to scan for "defaults_next/lightdense/" directories
 LDr_flag=false  #Flag to scan for "lightdenser/"  directories
 ID_flag=false   #Flag to scan for "intdense/"     directories
 RD_flag=false   #Flag to scan for "tightdense/"   directories
@@ -232,7 +235,8 @@ if [ $# == 0 ]; then
     echo "                       - tight          ti                         " >&2
     echo "                       - really_tight   re                         " >&2
     echo "                       - lightdense     ld                         " >&2
-    echo "                       - lightdenser    ldr                        " >&2
+    echo "                       - defaults_next_lightdense  dnld            " >&2
+    echo "                       - defaults_next_lightdenser ldr             " >&2
     echo "                       - intdense       id  # Not yet in FHI-aims  " >&2
     echo "                       - tightdense     td  # Not yet in FHI-aims  " >&2
     echo "                       - Tier2_aug2     aug2                       " >&2
@@ -255,151 +259,164 @@ else
     fi
     # Loop through all basis types
     for basis in "$@" ; do
-        basis=$(echo "$basis" | tr '[:upper:]' '[:lower:]')
+        basis=$(echo "$basis" | tr '[:upp  er:]' '[:lower:]')
         case "$basis" in
             "li"|"light")
                 if [[ -d "$Li_dir" && "$Li_dir" != "$basis_dir" ]] ; then 
                     Li_flag=true
-                    echo "Detected Basis: light"
+                    echo "Detected Basis: light @ $Li_dir"
                 else 
-                    echo "WARNING: 'light/' basis directory not detected --- Skipping..."  
+                    echo "WARNING: '$Li_dir' basis directory not detected --- Skipping..."  
                 fi
                 ;;
             "in"|"intermediate")
                 if [[ -d "$In_dir" && "$In_dir" != "$basis_dir" ]] ; then 
                     In_flag=true 
-                    echo "Detected Basis: intermediate" 
+                    echo "Detected Basis: intermediate @ $In_dir" 
                 else 
-                    echo "WARNING: 'intermediate/' basis directory not detected --- Skipping..." 
+                    echo "WARNING: '$In_dir' basis directory not detected --- Skipping..." 
                 fi
                 ;;
             "ti"|"tight")
                 if [[ -d "$Ti_dir" && "$Ti_dir" != "$basis_dir" ]] ; then 
                     Ti_flag=true 
-                    echo "Detected Basis: tight" 
+                    echo "Detected Basis: tight @ $Ti_dir" 
                 else 
-                    echo "WARNING: 'tight/' basis directory not detected --- Skipping..." 
+                    echo "WARNING: '$Ti_dir' basis directory not detected --- Skipping..." 
                 fi
                 ;;
             "re"|"really_tight")
                 if [[ -d "$Re_dir" && "$Re_dir" != "$basis_dir" ]] ; then 
 		    Re_flag=true 
-                    echo "Detected Basis: really_tight" 
+                    echo "Detected Basis: really_tight @ $Re_dir" 
                 else 
-                    echo "WARNING: 'really_tight/' basis directory not detected --- Skipping..." 
+                    echo "WARNING: '$Re_dir' basis directory not detected --- Skipping..." 
                 fi
                 ;;
             "ld"|"lightdense")
                 if [[ -d "$LD_dir" && "$LD_dir" != "$basis_dir" ]] ; 
                     then LD_flag=true 
-                    echo "Detected Basis: lightdense" 
+                    echo "Detected Basis: lightdense @ $LD_dir" 
                 else
-                    echo "WARNING: 'lightdense/' basis directory not detected --- Skipping..." 
+                    echo "WARNING: '$LD_dir' basis directory not detected --- Skipping..." 
                 fi
                 ;;
-            "ldr"|"lightdenser")
+	    "dnld"|"defaults_next_lightdense")
+                if [[ -d "$DNLD_dir" && "$DNLD_dir" != "$basis_dir" ]] ;
+                    then LD_flag=true
+                    echo "Detected Basis: defaults_next_lightdense @ $DNLD_dir"
+                else
+                    echo "WARNING: '$DNLD_dir' basis directory not detected --- Skipping..."
+                fi
+                ;;
+            "ldr"|"lightdenser"|"defaults_next_lightdenser")
                 if [[ -d "$LDr_dir" && "$LDr_dir" != "$basis_dir" ]] ;
                     then LDr_flag=true
-                    echo "Detected Basis: lightdenser"
+                    echo "Detected Basis: lightdenser @ $LDr_dir"
                 else
-                    echo "WARNING: 'lightdenser/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$LDr_dir' basis directory not detected --- Skipping..."
                 fi
                 ;;
             "id"|"intdense")
                 if [[ -d "$ID_dir" && "$ID_dir" != "$basis_dir" ]] ; then 
                     ID_flag=true 
-                    echo "Detected Basis: intdense"
+                    echo "Detected Basis: intdense @ $ID_dir"
                 else 
-                    echo "WARNING: 'intdense/' basis directory not detected --- Skipping..." 
+                    echo "WARNING: '$ID_dir' basis directory not detected --- Skipping..." 
                 fi
                 ;;
             "rd"|"tightdense")
                 if [[ -d "$TD_dir" && "$TD_dir" != "$basis_dir" ]] ; 
                     then TD_flag=true 
-                    echo "Detected Basis: tightdense"
+                    echo "Detected Basis: tightdense @ $TD_dir"
                 else 
-                    echo "ERROR: 'tightdense/' basis directory not detected --- Skipping..." 
+                    echo "ERROR: '$TD_dir' basis directory not detected --- Skipping..." 
                 fi
                 ;;
             "aug2"|"tier2_aug2")
                 if [[ -d "$Aug2_dir" && "$Aug2_dir" != "$basis_dir" ]] ;
                     then Aug2_flag=true
-                    echo "Detected Basis: Tier2_aug2"
+                    echo "Detected Basis: Tier2_aug2 @ $Aug2_dir"
                 else
-                    echo "ERROR: 'Tier2_aug2/' basis directory not detected --- Skipping..."
+                    echo "ERROR: '$Aug2_dir' basis directory not detected --- Skipping..."
                 fi
                 ;;
 	    "cu"|"custom")
                 if [[ -d "$Cu_dir" && "$Cu_dir" != "$basis_dir" ]] ;
                     then Cu_flag=true
-                    echo "Detected Basis: Custom (Designated by user in code header)"
+                    echo "Detected Basis: Custom (Designated by user in code header) @ $Cu_dir"
                 else
-                    echo "ERROR: 'Custom' basis directory not detected --- Skipping..."
+                    echo "ERROR: '$Cu_dir' basis directory not detected --- Skipping..."
                 fi
                 ;;
 	    "all")
-		if [[ -d "$Li_dir" && "$Li_dir" != "$basis_dir" ]] ; then
+                if [[ -d "$Li_dir" && "$Li_dir" != "$basis_dir" ]] ; then
                     Li_flag=true
-                    echo "Detected Basis: light"
+                    echo "Detected Basis: light @ $Li_dir"
                 else
-                    echo "WARNING: 'light/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$Li_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$In_dir" && "$In_dir" != "$basis_dir" ]] ; then
+                if [[ -d "$In_dir" && "$In_dir" != "$basis_dir" ]] ; then
                     In_flag=true
-                    echo "Detected Basis: intermediate"
+                    echo "Detected Basis: intermediate @ $In_dir"
                 else
-                    echo "WARNING: 'intermediate/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$In_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$Ti_dir" && "$Ti_dir" != "$basis_dir" ]] ; then
+                if [[ -d "$Ti_dir" && "$Ti_dir" != "$basis_dir" ]] ; then
                     Ti_flag=true
-                    echo "Detected Basis: tight"
+                    echo "Detected Basis: tight @ $Ti_dir"
                 else
-                    echo "WARNING: 'tight/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$Ti_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$Re_dir" && "$Re_dir" != "$basis_dir" ]] ; then 
-		    Re_flag=true
-                    echo "Detected Basis: really_tight"
+                if [[ -d "$Re_dir" && "$Re_dir" != "$basis_dir" ]] ; then
+                    Re_flag=true
+                    echo "Detected Basis: really_tight @ $Re_dir"
                 else
-                    echo "WARNING: 'really_tight/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$Re_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$LD_dir" && "$LD_dir" != "$basis_dir" ]] ;
+                if [[ -d "$LD_dir" && "$LD_dir" != "$basis_dir" ]] ;
                     then LD_flag=true
-                    echo "Detected Basis: lightdense"
+                    echo "Detected Basis: lightdense @ $LD_dir"
                 else
-                    echo "WARNING: 'lightdense/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$LD_dir' basis directory not detected --- Skipping..."
+                fi
+                if [[ -d "$DNLD_dir" && "$DNLD_dir" != "$basis_dir" ]] ;
+                    then LD_flag=true
+                    echo "Detected Basis: defaults_next_lightdense @ $DNLD_dir"
+                else
+                    echo "WARNING: '$DNLD_dir' basis directory not detected --- Skipping..."
                 fi
                 if [[ -d "$LDr_dir" && "$LDr_dir" != "$basis_dir" ]] ;
                     then LDr_flag=true
-                    echo "Detected Basis: lightdenser"
+                    echo "Detected Basis: lightdenser @ $LDr_dir"
                 else
-                    echo "WARNING: 'lightdenser/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$LDr_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$ID_dir" && "$ID_dir" != "$basis_dir" ]] ; then
+                if [[ -d "$ID_dir" && "$ID_dir" != "$basis_dir" ]] ; then
                     ID_flag=true
-                    echo "Detected Basis: intdense"
+                    echo "Detected Basis: intdense @ $ID_dir"
                 else
-                    echo "WARNING: 'intdense/' basis directory not detected --- Skipping..."
+                    echo "WARNING: '$ID_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$TD_dir" && "$TD_dir" != "$basis_dir" ]] ;
+                if [[ -d "$TD_dir" && "$TD_dir" != "$basis_dir" ]] ;
                     then TD_flag=true
-                    echo "Detected Basis: tightdense"
+                    echo "Detected Basis: tightdense @ $TD_dir"
                 else
-                    echo "WARNING: 'tightdense/' basis directory not detected --- Skipping..."
+                    echo "ERROR: '$TD_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$Aug2_dir" && "$Aug2_dir" != "$basis_dir" ]] ;
+                if [[ -d "$Aug2_dir" && "$Aug2_dir" != "$basis_dir" ]] ;
                     then Aug2_flag=true
-                    echo "Detected Basis: Tier2_aug2"
+                    echo "Detected Basis: Tier2_aug2 @ $Aug2_dir"
                 else
-                    echo "WARNING: 'Tier2_aug2/' basis directory not detected --- Skipping..."
+                    echo "ERROR: '$Aug2_dir' basis directory not detected --- Skipping..."
                 fi
-		if [[ -d "$Cu_dir" && "$Cu_dir" != "$basis_dir" ]] ;
+                if [[ -d "$Cu_dir" && "$Cu_dir" != "$basis_dir" ]] ;
                     then Cu_flag=true
-                    echo "Detected Basis: Custom (Designated by user in code header)"
+                    echo "Detected Basis: Custom (Designated by user in code header) @ $Cu_dir"
                 else
-                    echo "ERROR: 'Custom' basis directory not detected --- Skipping..."
+                    echo "ERROR: '$Cu_dir' basis directory not detected --- Skipping..."
                 fi
                 ;;
-
             *)
                 echo "ERROR: $basis is not a supported basis --- Exiting..."
                 exit 1
@@ -417,6 +434,7 @@ if [[ ${Setall_flag} == true ]] ; then
     elif [[ ${Ti_flag} == true ]] ; then Ti_list=($(pwd | tee /dev/tty))
     elif [[ ${Re_flag} == true ]] ; then Re_list=($(pwd | tee /dev/tty))
     elif [[ ${LD_flag} == true ]] ; then LD_list=($(pwd | tee /dev/tty))
+    elif [[ ${DNLD_flag} == true ]] ; then DNLD_list=($(pwd | tee /dev/tty))
     elif [[ ${LDr_flag} == true ]] ; then LDr_list=($(pwd | tee /dev/tty))
     elif [[ ${ID_flag} == true ]] ; then ID_list=($(pwd | tee /dev/tty))
     elif [[ ${TD_flag} == true ]] ; then TD_list=($(pwd | tee /dev/tty))
@@ -443,6 +461,10 @@ else
     if [[ ${LD_flag} == true ]] ; then
         echo "    LightDense:"
         LD_list=($(find $(pwd) -type d -iname 'ld' -o -iname 'lightdense' -o -iname '*_then_lightdense' -o -iname 'defaults_2020_lightdense' 2>/dev/null | tee /dev/tty)) 
+    fi
+    if [[ ${DNLD_flag} == true ]] ; then
+        echo "    defaults_next_LightDense:"
+        DNLD_list=($(find $(pwd) -type d -iname 'dnld' -o -iname 'defaults_next_lightdense' -o -iname '*_then_defaults_next_lightdense' 2>/dev/null | tee /dev/tty))
     fi
     if [[ ${LDr_flag} == true ]] ; then
         echo "    LightDenser:"
@@ -482,6 +504,7 @@ if [[ ${In_flag} == true ]] ; then Construct_basis "$In_dir" "${In_list[@]}" ; f
 if [[ ${Ti_flag} == true ]] ; then Construct_basis "$Ti_dir" "${Ti_list[@]}" ; fi
 if [[ ${Re_flag} == true ]] ; then Construct_basis "$Re_dir" "${Re_list[@]}" ; fi
 if [[ ${LD_flag} == true ]] ; then Construct_basis "$LD_dir" "${LD_list[@]}" ; fi
+if [[ ${DNLD_flag} == true ]] ; then Construct_basis "$DNLD_dir" "${DNLD_list[@]}" ; fi
 if [[ ${LDr_flag} == true ]] ; then Construct_basis "$LDr_dir" "${LDr_list[@]}" ; fi
 if [[ ${ID_flag} == true ]] ; then Construct_basis "$ID_dir" "${ID_list[@]}" ; fi
 if [[ ${TD_flag} == true ]] ; then Construct_basis "$TD_dir" "${TD_list[@]}" ; fi
