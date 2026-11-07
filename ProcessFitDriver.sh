@@ -1,16 +1,17 @@
 #!/bin/bash
 
-version_stamp=2.01
+version_stamp=2.02
 
-# Kyle R Bryenton 2026-05-21 <kyle.bryenton@gmail.com>
+# Kyle R Bryenton 2026-11-07 <kyle.bryenton@gmail.com>
 # ProcessFitDriver.sh
 # Available at: https://github.com/KyleBryenton/FHIaims-Toolbox
-# Version: 2.01
+# Version: 2.02
 # ChangeLog:
 #     v1.00 - 2025-07-31 - Initial implementation, for use with fit_driver from 2019
 #     v2.00 - 2026-05-16 - Updated version that works with Z damping. Works with most up-to-date version of fit_driver
 #                          Total rewrite from previous version. Some features were discontinued such as output to .params
-#     v2.01 - 2026-05-21 - Changed the final output of error stats from 8.4f to 8.3f to cut trailing zeros. 
+#     v2.01 - 2026-05-21 - Changed the final output of error stats from 8.4f to 8.3f to cut trailing zeros.
+#     v2.02 - 2026-11-07 - Added fhiaims flag to print the damping table for FHI-aims src/xdm.f90.
 #     
 # Run using:
 #     ./ProcessFitDriver.sh <list of paths to fit_driver.m outputs>
@@ -30,6 +31,10 @@ n_cols=4
 
 # Print one output per input fit-driver.m output. (True = 1, False = 0)
 partial_print=0
+
+# Print the FHI-aims damping table instead of the summary table. (True = 1, False = 0)
+# Paste the output into xdm_damp_table in FHI-aims src/xdm.f90.
+fhiaims=1
 
 
 
@@ -242,7 +247,7 @@ elif (( dampType==2 )) ; then
     # Print Table
     for (( index=0 ; index<$# ; index++ )) ; do
         for (( i=0 ; i<${n_entries[$index]} ; i++ )) ; do
-            printf "%*s %8d %8.3f %8.3f %8.3f %8.3f %8.3f %8.3f %14.4f\n" \
+            printf "%*s %8d %8.3f %8.3f %8.3f %8.3f %8.3f %8.3f %14s\n" \
                 "$max_len" "${Cols["$index,$i"]}" \
                 "${nSet["$index,$i"]}" "${MAD["$index,$i"]}" "${MaxAD["$index,$i"]}" "${RMS["$index,$i"]}" \
                 "${MAPD["$index,$i"]}" "${MaxAPD["$index,$i"]}" "${RMSP["$index,$i"]}" \
@@ -261,6 +266,32 @@ tail +2 "$script_name.temp1" | sort -k1,1 -k8,8n \
                             | awk '!seen[$1]++' \
                             | sed "s/\// /g" \
                             > "$script_name.temp2"
+
+# If user requested the FHI-aims damping table, print it and exit.
+# Basis and functional are taken from the last two Dir columns.
+# BJ damping prints z_damp=0, Z damping prints a1=a2=0.
+if (( fhiaims == 1 )) ; then
+    awk -v n=$n_cols -v d=$dampType '
+    {
+        # If BJ damping, read BJ elements, else read Z element
+        if ( d == 1 ) {
+            a1 = $(n+8) ; a2 = $(n+9) ; z = 0
+        } else {
+            a1 = 0      ; a2 = 0      ; z = $(n+8)
+        }
+
+        # Print the basis and functional, wrapped in quotes
+        printf "      damp_entry(%-32s, %-19s, ", "\"" $(n-1) "\"", "\"" $n "\""
+
+        # Print the damping parameters as Fortran doubles
+        printf "%.8fd0  , %.8fd0  , %15.8fd0 ), &\n", a1, a2, z
+    }
+    ' "$script_name.temp2" | sort
+
+#    # Clean up temp files
+#    rm "$script_name.temp1" "$script_name.temp2"
+#    exit 0
+fi
 
 # For the first `n_cols` columns, and count the max length within each one.
 for (( i=1 ; i<=$n_cols ; i++ )) ; do
